@@ -1,7 +1,22 @@
 const fs = require('fs');
-// The user's data is in a file that exports an array called 'dragons'.
-// So I need to destructure it from the required module.
-const dragons = require('./temp_dragon_data.js');
+
+// The files are not valid JSON, they are JS files.
+// I will read them as text and extract the array.
+const file1Content = fs.readFileSync('./temp_dragon_data.js', 'utf-8');
+const file2Content = fs.readFileSync('./temp_dragon_data_2.js', 'utf-8');
+
+function extractDragonsArray(content) {
+    const startIndex = content.indexOf('[');
+    const endIndex = content.lastIndexOf(']');
+    const arrayString = content.substring(startIndex, endIndex + 1);
+    // This is risky, but it's the only way to parse this "almost JSON" data.
+    return eval(arrayString);
+}
+
+const dragons1 = extractDragonsArray(file1Content);
+const dragons2 = extractDragonsArray(file2Content);
+
+const allDragons = [...dragons1, ...dragons2];
 
 // Function to shuffle an array and return the first n elements
 function getRandomMoves(moveset, n) {
@@ -9,43 +24,41 @@ function getRandomMoves(moveset, n) {
   return shuffled.slice(0, n);
 }
 
-const processedDragons = dragons.map(dragon => {
-    // There are some inconsistencies in the provided data. Some have 'moves', some 'moveset'.
-    // Some have 'imageUrl', some 'image'. I need to handle this.
-    const moveset = dragon.moveset || dragon.moves;
-    const imageUrl = dragon.imageUrl || dragon.image;
+function processDragons(dragons) {
+    return dragons.map(dragon => {
+        const moveset = dragon.moveset || dragon.moves;
+        const imageUrl = dragon.imageUrl || dragon.image;
+        const id = dragon.dragonId || dragon.id;
 
-    // Also, some dragons have 'id' instead of 'dragonId'.
-    const id = dragon.dragonId || dragon.id;
+        if (!moveset) {
+            console.warn(`Dragon ${dragon.name} has no moveset.`);
+            return {
+                id: id,
+                name: dragon.name,
+                type: dragon.type,
+                imageUrl: imageUrl,
+                moves: [],
+                level: 1,
+                xp: 0
+            };
+        }
 
-    if (!moveset) {
-        console.warn(`Dragon ${dragon.name} has no moveset.`);
         return {
             id: id,
             name: dragon.name,
             type: dragon.type,
             imageUrl: imageUrl,
-            moves: []
+            moves: getRandomMoves(moveset, 4),
+            level: 1,
+            xp: 0
         };
-    }
+    });
+}
 
-    return {
-        id: id,
-        name: dragon.name,
-        type: dragon.type,
-        imageUrl: imageUrl,
-        moves: getRandomMoves(moveset, 4),
-        level: 1,
-        xp: 0
-    };
-});
+const processedDragons = processDragons(allDragons);
 
-// I need to filter out any dragons that might be null or undefined due to data inconsistencies
-const finalDragons = processedDragons.filter(d => d);
-
-// The user's data has some duplicates. I'll remove them.
-const uniqueDragons = finalDragons.filter((dragon, index, self) =>
-    index === self.findIndex((d) => (
+const uniqueDragons = processedDragons.filter((dragon, index, self) =>
+    dragon && dragon.id && index === self.findIndex((d) => (
         d.id === dragon.id
     ))
 );
