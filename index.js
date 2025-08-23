@@ -226,7 +226,8 @@ async function main() {
 %spawncard [--tier=<tier>] - Spawn a random card (optionally of a specific tier, mods only).
 %claim - Claim a spawned card.
 %cards - View your card collection (deck and holder).
-%spawnpack - Spawn a pack of 6 cards.
+%spawnpack6 - Spawn a 6-card pack with guaranteed high-tier cards.
+%spawnpack7 - Spawn a 7-card pack with one card from each tier.
 %claimpack - Claim a spawned card pack.
 %movetodeck <holder_index> - Move a card from your holder to your deck.
 %movetoholder <deck_index> - Move a card from your deck to your holder.
@@ -268,7 +269,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- spawnpack\n- givecard');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard');
         }
 
         switch (guideName) {
@@ -312,14 +313,6 @@ This command allows you to remove a move from your dragon's moveset to make spac
 - Your collection is split into a \`deck\` (max 12 cards) and a \`holder\` (unlimited storage).
 - Use \`%cards\` to view your deck and holder.
 - Use \`%movetodeck <holder_index>\` and \`%movetoholder <deck_index>\` to organize your collection.`
-                );
-                break;
-            case 'spawnpack':
-                await reply(
-`*Guide: %spawnpack*
-- This command spawns a pack of 6 random cards.
-- It guarantees at least one card of Tier 5, 6, or S.
-- Use \`%claimpack\` to claim the entire pack.`
                 );
                 break;
             case 'givecard':
@@ -719,22 +712,57 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
-      case 'spawnpack': {
+      case 'spawnpack6': {
         if (activeCardPacks[from]) {
             return reply('A card pack has already been spawned. Use %claimpack to get it.');
         }
 
-        const highTierCards = cards.filter(c => ['5', '6', 'S'].includes(c.tier));
-        const guaranteedCard = highTierCards[Math.floor(Math.random() * highTierCards.length)];
+        const sTierCards = cards.filter(c => c.tier === 'S');
+        const tier6Cards = cards.filter(c => c.tier === '6');
 
-        const pack = [guaranteedCard];
-        for (let i = 0; i < 5; i++) {
+        if (sTierCards.length === 0 || tier6Cards.length === 0) {
+            return reply('Not enough high-tier cards available to create this pack.');
+        }
+
+        const guaranteedSTier = sTierCards[Math.floor(Math.random() * sTierCards.length)];
+        const guaranteedTier6 = tier6Cards[Math.floor(Math.random() * tier6Cards.length)];
+
+        const pack = [guaranteedSTier, guaranteedTier6];
+        for (let i = 0; i < 4; i++) {
             pack.push(cards[Math.floor(Math.random() * cards.length)]);
         }
 
         activeCardPacks[from] = pack;
 
-        let response = 'A card pack has been spawned! It contains:\n\n';
+        let response = 'A 6-card pack has been spawned! It contains:\n\n';
+        pack.forEach(card => {
+            response += `- ${card.name} (Tier: ${card.tier})\n`;
+        });
+        response += '\nUse `%claimpack` to claim the entire pack.';
+
+        await reply(response);
+        break;
+      }
+
+      case 'spawnpack7': {
+        if (activeCardPacks[from]) {
+            return reply('A card pack has already been spawned. Use %claimpack to get it.');
+        }
+
+        const tiers = ['1', '2', '3', '4', '5', '6', 'S'];
+        const pack = [];
+
+        for (const tier of tiers) {
+            const cardsInTier = cards.filter(c => c.tier === tier);
+            if (cardsInTier.length === 0) {
+                return reply(`Not enough cards in tier ${tier} to create this pack.`);
+            }
+            pack.push(cardsInTier[Math.floor(Math.random() * cardsInTier.length)]);
+        }
+
+        activeCardPacks[from] = pack;
+
+        let response = 'A 7-card pack has been spawned! It contains:\n\n';
         pack.forEach(card => {
             response += `- ${card.name} (Tier: ${card.tier})\n`;
         });
