@@ -32,7 +32,8 @@ function getPlayer(id, name) {
       cooldowns: {},
       inventory: {},
       roles: [],
-      banned: false
+      banned: false,
+      dailyQuest: null
     };
     savePlayers(players);
   } else {
@@ -48,6 +49,10 @@ function getPlayer(id, name) {
     }
     if (players[id].banned === undefined) {
         players[id].banned = false;
+        needsSave = true;
+    }
+    if (players[id].dailyQuest === undefined) {
+        players[id].dailyQuest = null;
         needsSave = true;
     }
     ['party', 'den'].forEach(location => {

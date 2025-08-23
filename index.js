@@ -13,6 +13,8 @@ const axios = require('axios');
 const { getPlayer, updatePlayer, getAllPlayers } = require('./playerData');
 const dragons = require('./dragonData');
 const ytdlp = require('ytdlp-nodejs');
+const shop = require('./shop.js');
+const cards = require('./cardData.js');
 
 const OWNER_NAME = 'ⱠΔ₩–ⱠΞƧƧ ⱣⱧΔ₥ŦØ₥';
 const OWNER_JID = '26775949123@s.whatsapp.net';
@@ -38,18 +40,33 @@ function getRank(level) {
 }
 
 const wildSpawnsEnabled = { enabled: false };
-const COMPLIMENTS = [ "You're an amazing person!", "You're a true inspiration!", "You have a heart of gold." ];
-const INSULTS = [ "You're not the sharpest tool in the shed, are you?", "I've had conversations with a wall that were more interesting.", "I've seen more charisma in a wet sock." ];
-const FLIRT_LINES = [ "Are you a magician? Because whenever I look at you, everyone else disappears!", "Do you have a map? I just got lost in your eyes.", "I'm not a photographer, but I can definitely picture us together." ];
-const SHAYARI = [ "Tere ishq mein, hadd se guzar jaun...", "Mohabbat ka safar, lamba hai magar...", "Dil ki baatein, lafzon mein kaise kahun..." ];
+const COMPLIMENTS = [ "You're an amazing person!", "You're a true inspiration!", "You have a heart of gold.", "You're a ray of sunshine on a cloudy day.", "You're more fun than a barrel of monkeys." ];
+const INSULTS = [ "You're not the sharpest tool in the shed, are you?", "I've had conversations with a wall that were more interesting.", "I've seen more charisma in a wet sock.", "I've seen more intelligent life forms in a petri dish." ];
+const FLIRT_LINES = [ "Are you a magician? Because whenever I look at you, everyone else disappears!", "Do you have a map? I just got lost in your eyes.", "I'm not a photographer, but I can definitely picture us together.", "If you were a vegetable, you'd be a cute-cumber." ];
+const SHAYARI = [ "Tere ishq mein, hadd se guzar jaun...", "Mohabbat ka safar, lamba hai magar...", "Dil ki baatein, lafzon mein kaise kahun...", "Tumhari yaadon mein, din raat khoya rehta hoon." ];
+
+function getShipComment(percentage) {
+    if (percentage < 20) return "Not a great match, but anything is possible!";
+    if (percentage < 50) return "There's some potential here!";
+    if (percentage < 80) return "This could be a great match!";
+    if (percentage < 100) return "You two are a perfect match!";
+    return "It's a match made in heaven! 100%!";
+}
+
 const activeWildEncounters = {};
 const activeBattles = {};
 const activeTrades = {};
+const quests = {};
+const dungeons = {};
+const market = {};
+const achievements = {};
 let botMode = 'public';
 let autoTyping = false;
 let autoRead = false;
 let antideleteEnabled = false;
 let autoreactEnabled = false;
+const activeCardSpawns = {};
+const activeCardPacks = {};
 
 async function main() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info_folder');
@@ -118,6 +135,8 @@ async function main() {
     player.den = player.den || [];
     player.cooldowns = player.cooldowns || {};
     player.pc = player.pc || [];
+    player.deck = player.deck || [];
+    player.holder = player.holder || [];
 
     const savePlayer = () => updatePlayer(player);
 
@@ -150,14 +169,21 @@ async function main() {
 %profile [@user] - View your or another user's profile.
 %leaderboard - View the richest players.
 %nickname <dragon_index> <new_name> - Give your dragon a nickname.
+%daily - Get a daily reward.
+%quests - View and complete quests.
+%dex <dragon_name_or_id> - View DragonDex information.
+%craft <item_name> - Craft new items.
+%map - View the world map.
+%achievements - View your achievements.
 
 *Economy:*
 %balance - Check gold & bank
 %deposit <amount> - Deposit gold
 %withdraw <amount> - Withdraw gold
 %mart - View items to buy
-%buy <item> - Buy capture tools
+%buy <item> - Buy items from the shop.
 %slot <amount> - Gamble gold (max 1,000,000 at once)
+%market - Access the player market.
 
 *Dragons:*
 %spawn - Spawn a wild dragon (cooldown 10m)
@@ -174,6 +200,8 @@ async function main() {
 %battle @user - Challenge another player
 %battle fight <1-4> - Use a move in battle
 %remove <move_name> - Remove a move from your dragon to learn a new one.
+%dungeon - Enter a dungeon.
+%boss - Fight the global boss.
 
 *Gifting & Trading:*
 %givedragon <dragon_index> @user - Give a dragon to another player.
@@ -181,16 +209,43 @@ async function main() {
 %trade accept - Accept a trade proposal.
 %trade decline - Decline a trade proposal.
 
+*Fun Commands:*
+%compliment @user
+%insult @user
+%flirt
+%shayari
+%goodnight
+%roseday
+%character @user
+%wasted @user
+%ship @user
+%simp @user
+%stupid @user [text]
+
+*Card Collecting:*
+%spawncard [--tier=<tier>] - Spawn a random card (optionally of a specific tier, mods only).
+%claim - Claim a spawned card.
+%cards - View your card collection (deck and holder).
+%spawnpack - Spawn a pack of 6 cards.
+%claimpack - Claim a spawned card pack.
+%movetodeck <holder_index> - Move a card from your holder to your deck.
+%movetoholder <deck_index> - Move a card from your deck to your holder.
+%givecard <deck|holder> <card_index> @user - Give a card to another player.
+
 *Admin:*
 %ban @user - Ban a user from using the bot.
 %unban @user - Unban a user.
-%promote @user - Promote a user to mod.
-%demote @user - Demote a mod.
 %kick @user - Kick a user from the group.
 %wild on/off - Enable/disable wild spawns (mods only)
+%spawnwild <Dragon Name> <Level> - Spawn a specific high-level dragon.
 %givegold @user <amount> - Give gold to user (owner only)
+%re-roll <dragon_index> - Re-roll a dragon's moves (owner/mod only).
 
 *Owner:*
+%addsudo @user - Promote a user to mod.
+%delsudo @user - Demote a mod.
+%addpower @user - Add a power user.
+%delpower @user - Remove a power user.
 %mode <public/private> - Set the bot mode.
 %clearsession - Clear the bot's session file.
 %setpp <reply to image> - Set the bot's profile picture.
@@ -201,6 +256,10 @@ async function main() {
 
 *Downloader:*
 %play <song_name> - Play a song from YouTube.
+%youtube <mp3/mp4> <url> - Download from YouTube.
+%instagram <url> - Download from Instagram.
+%facebook <url> - Download from Facebook.
+%tiktok <url> - Download from TikTok.
 
 Owner: ${OWNER_NAME}
         `);
@@ -209,7 +268,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- spawnpack\n- givecard');
         }
 
         switch (guideName) {
@@ -247,9 +306,113 @@ This command allows you to remove a move from your dragon's moveset to make spac
 - Make sure to type the move name exactly as it appears in the \`%dragon\` command.`
                 );
                 break;
+            case 'cards':
+                await reply(
+`*Guide: Card Collecting*
+- Your collection is split into a \`deck\` (max 12 cards) and a \`holder\` (unlimited storage).
+- Use \`%cards\` to view your deck and holder.
+- Use \`%movetodeck <holder_index>\` and \`%movetoholder <deck_index>\` to organize your collection.`
+                );
+                break;
+            case 'spawnpack':
+                await reply(
+`*Guide: %spawnpack*
+- This command spawns a pack of 6 random cards.
+- It guarantees at least one card of Tier 5, 6, or S.
+- Use \`%claimpack\` to claim the entire pack.`
+                );
+                break;
+            case 'givecard':
+                await reply(
+`*Guide: %givecard*
+- This command allows you to give a card to another player.
+- Usage: \`%givecard <deck|holder> <card_index> @user\`
+- Example: \`%givecard deck 3 @user\` to give the 3rd card from your deck.`
+                );
+                break;
             default:
                 await reply('Invalid guide name. Use `%guide` to see the list of available guides.');
         }
+        break;
+      }
+
+      case 'spawnwild': {
+        if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+        if (activeWildEncounters[from]) return reply('A wild dragon has already spawned in this chat. Use %catch or defeat it first.');
+
+        const dragonName = args.slice(0, -1).join(' ');
+        const level = parseInt(args[args.length - 1]);
+
+        if (!dragonName || isNaN(level) || level <= 0) {
+            return reply('Invalid usage. Use `%spawnwild <Dragon Name> <Level>`.');
+        }
+
+        const dragonData = dragons.find(d => d.name.toLowerCase() === dragonName.toLowerCase());
+
+        if (!dragonData) {
+            return reply(`Dragon "${dragonName}" not found in the DragonDex.`);
+        }
+
+        const wildDragon = { ...dragonData };
+        wildDragon.level = level;
+
+        const totalDamage = wildDragon.moves.reduce((sum, move) => sum + move.damage, 0);
+        wildDragon.hp = Math.floor((totalDamage * 5) * (1 + level / 10)); // HP scales with level
+
+        activeWildEncounters[from] = { ...wildDragon, captured: false };
+
+        await reply(`A powerful wild ${wildDragon.name} (Level ${wildDragon.level}, HP: ${wildDragon.hp}) has been summoned! Use %attack to battle it.`);
+        break;
+      }
+
+      case 'youtube': {
+        const format = args[0]?.toLowerCase();
+        const url = args[1];
+
+        if (!format || (format !== 'mp3' && format !== 'mp4')) {
+            return reply('Please specify a format: mp3 or mp4.');
+        }
+        if (!url) return reply('Please provide a YouTube URL.');
+
+        await reply(`Downloading your ${format}, please wait...`);
+
+        try {
+            const stream = ytdlp(url, {
+                output: '-',
+                format: format === 'mp3' ? 'bestaudio[ext=m4a]/bestaudio/best' : 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best/best',
+            });
+
+            const chunks = [];
+            for await (const chunk of stream) {
+                chunks.push(chunk);
+            }
+            const buffer = Buffer.concat(chunks);
+
+            if (format === 'mp3') {
+                await sock.sendMessage(from, { audio: buffer });
+            } else {
+                await sock.sendMessage(from, { video: buffer });
+            }
+
+        } catch (error) {
+            console.error('Error downloading from YouTube:', error);
+            await reply('Sorry, I could not download the video/audio.');
+        }
+        break;
+      }
+
+      case 'instagram': {
+        // To be implemented
+        break;
+      }
+
+      case 'facebook': {
+        // To be implemented
+        break;
+      }
+
+      case 'tiktok': {
+        // To be implemented
         break;
       }
 
@@ -302,6 +465,7 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
+      case 'addsudo':
       case 'promote': {
         if (!hasRole('owner')) return reply('You do not have permission to use this command.');
         const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -314,6 +478,7 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
+      case 'delsudo':
       case 'demote': {
         if (!hasRole('owner')) return reply('You do not have permission to use this command.');
         const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -323,6 +488,30 @@ This command allows you to remove a move from your dragon's moveset to make spac
         targetPlayer.roles = targetPlayer.roles.filter(r => r !== 'mod');
         updatePlayer(targetPlayer);
         await reply(`${targetPlayer.name} has been demoted.`);
+        break;
+      }
+
+      case 'addpower': {
+        if (!hasRole('owner')) return reply('You do not have permission to use this command.');
+        const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        if (!targetId) return reply('You need to mention a user to add as power user.');
+        const targetPlayer = getPlayer(targetId);
+        if (targetPlayer.roles.includes('power')) return reply(`${targetPlayer.name} is already a power user.`);
+        targetPlayer.roles.push('power');
+        updatePlayer(targetPlayer);
+        await reply(`${targetPlayer.name} has been added as a power user.`);
+        break;
+      }
+
+      case 'delpower': {
+        if (!hasRole('owner')) return reply('You do not have permission to use this command.');
+        const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        if (!targetId) return reply('You need to mention a user to remove from power users.');
+        const targetPlayer = getPlayer(targetId);
+        if (!targetPlayer.roles.includes('power')) return reply(`${targetPlayer.name} is not a power user.`);
+        targetPlayer.roles = targetPlayer.roles.filter(r => r !== 'power');
+        updatePlayer(targetPlayer);
+        await reply(`${targetPlayer.name} has been removed from power users.`);
         break;
       }
 
@@ -395,17 +584,11 @@ This command allows you to remove a move from your dragon's moveset to make spac
 
       case 'mart':
       case 'buy': {
-        const shop = {
-          masterorb: { name: "Master Orb", price: 50000 },
-          ultratrap: { name: "Ultra Trap", price: 10000 },
-          greatsnare: { name: "Great Snare", price: 5000 },
-          dragnet: { name: "Dragon Net", price: 1000 }
-        };
-
         if (command === 'mart') {
-          let shopText = '*Shop Items:*\n';
+          let shopText = '*Shop Items:*\n\n';
           for (const key in shop) {
-            shopText += `- ${shop[key].name}: ${shop[key].price} gold\n`;
+            shopText += `*${shop[key].name}* - ${shop[key].price} gold\n`;
+            shopText += `> ${shop[key].description}\n\n`;
           }
           await reply(shopText);
         } else {
@@ -510,6 +693,151 @@ This command allows you to remove a move from your dragon's moveset to make spac
             }
         }
 
+        break;
+      }
+
+      case 'cards': {
+        let response = `*Your Deck (${player.deck.length}/12):*\n`;
+        if (player.deck.length === 0) {
+            response += 'Your deck is empty.\n';
+        } else {
+            player.deck.forEach((card, i) => {
+                response += `${i + 1}. ${card.name} (Tier: ${card.tier})\n`;
+            });
+        }
+
+        response += `\n*Your Card Holder (${player.holder.length}):*\n`;
+        if (player.holder.length === 0) {
+            response += 'Your card holder is empty.\n';
+        } else {
+            player.holder.forEach((card, i) => {
+                response += `${i + 1}. ${card.name} (Tier: ${card.tier})\n`;
+            });
+        }
+
+        await reply(response);
+        break;
+      }
+
+      case 'spawnpack': {
+        if (activeCardPacks[from]) {
+            return reply('A card pack has already been spawned. Use %claimpack to get it.');
+        }
+
+        const highTierCards = cards.filter(c => ['5', '6', 'S'].includes(c.tier));
+        const guaranteedCard = highTierCards[Math.floor(Math.random() * highTierCards.length)];
+
+        const pack = [guaranteedCard];
+        for (let i = 0; i < 5; i++) {
+            pack.push(cards[Math.floor(Math.random() * cards.length)]);
+        }
+
+        activeCardPacks[from] = pack;
+
+        let response = 'A card pack has been spawned! It contains:\n\n';
+        pack.forEach(card => {
+            response += `- ${card.name} (Tier: ${card.tier})\n`;
+        });
+        response += '\nUse `%claimpack` to claim the entire pack.';
+
+        await reply(response);
+        break;
+      }
+
+      case 'claimpack': {
+        const pack = activeCardPacks[from];
+        if (!pack) {
+            return reply('There is no card pack to claim.');
+        }
+
+        pack.forEach(card => {
+            if (player.deck.length < 12) {
+                player.deck.push(card);
+            } else {
+                player.holder.push(card);
+            }
+        });
+
+        savePlayer();
+        delete activeCardPacks[from];
+
+        await reply('You have claimed the card pack! The cards have been added to your collection.');
+        break;
+      }
+
+      case 'movetodeck': {
+        const holderIndex = parseInt(args[0]) - 1;
+        if (isNaN(holderIndex) || holderIndex < 0 || holderIndex >= player.holder.length) {
+            return reply('Invalid card holder index.');
+        }
+
+        if (player.deck.length >= 12) {
+            return reply('Your deck is full. Move a card to your holder first.');
+        }
+
+        const [cardToMove] = player.holder.splice(holderIndex, 1);
+        player.deck.push(cardToMove);
+        savePlayer();
+
+        await reply(`${cardToMove.name} has been moved to your deck.`);
+        break;
+      }
+
+      case 'movetoholder': {
+        const deckIndex = parseInt(args[0]) - 1;
+        if (isNaN(deckIndex) || deckIndex < 0 || deckIndex >= player.deck.length) {
+            return reply('Invalid deck index.');
+        }
+
+        const [cardToMove] = player.deck.splice(deckIndex, 1);
+        player.holder.push(cardToMove);
+        savePlayer();
+
+        await reply(`${cardToMove.name} has been moved to your card holder.`);
+        break;
+      }
+
+      case 'givecard': {
+        const source = args[0]?.toLowerCase();
+        const cardIndex = parseInt(args[1]) - 1;
+        const recipientId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+
+        if (!source || (source !== 'deck' && source !== 'holder')) {
+            return reply('Please specify the source: deck or holder.');
+        }
+        if (isNaN(cardIndex)) {
+            return reply('Invalid card index.');
+        }
+        if (!recipientId) {
+            return reply('You need to mention a user to give a card to.');
+        }
+
+        const recipient = getPlayer(recipientId);
+        if (!recipient) return reply('Recipient not found.');
+
+        let cardToGive;
+        if (source === 'deck') {
+            if (cardIndex < 0 || cardIndex >= player.deck.length) {
+                return reply('Invalid deck index.');
+            }
+            [cardToGive] = player.deck.splice(cardIndex, 1);
+        } else { // holder
+            if (cardIndex < 0 || cardIndex >= player.holder.length) {
+                return reply('Invalid holder index.');
+            }
+            [cardToGive] = player.holder.splice(cardIndex, 1);
+        }
+
+        if (recipient.deck.length < 12) {
+            recipient.deck.push(cardToGive);
+        } else {
+            recipient.holder.push(cardToGive);
+        }
+
+        updatePlayer(player);
+        updatePlayer(recipient);
+
+        await reply(`You have given your ${cardToGive.name} card to ${recipient.name}.`);
         break;
       }
 
@@ -858,6 +1186,47 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
+      case 'daily': {
+        // To be implemented
+        break;
+      }
+      case 'quests': {
+        // To be implemented
+        break;
+      }
+      case 'dex': {
+        // To be implemented
+        break;
+      }
+      case 'craft': {
+        // To be implemented
+        break;
+      }
+      case 'map': {
+        // To be implemented
+        break;
+      }
+      case 'achievements': {
+        // To be implemented
+        break;
+      }
+      case 'market': {
+        // To be implemented
+        break;
+      }
+      case 'dungeon': {
+        // To be implemented
+        break;
+      }
+      case 'boss': {
+        // To be implemented
+        break;
+      }
+      case 're-roll': {
+        // To be implemented
+        break;
+      }
+
       case 'compliment': {
         const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!targetId) return reply('You need to mention a user to compliment.');
@@ -873,6 +1242,29 @@ This command allows you to remove a move from your dragon's moveset to make spac
         const targetPlayer = getPlayer(targetId);
         const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
         await reply(`${targetPlayer.name}, ${insult}`);
+        break;
+      }
+
+      case 're-roll': {
+        if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+
+        const dragonIndex = parseInt(args[0]) - 1;
+        if (isNaN(dragonIndex) || dragonIndex < 0 || dragonIndex >= player.party.length) {
+            return reply('Invalid dragon index.');
+        }
+
+        const dragon = player.party[dragonIndex];
+        const fullDragonData = dragons.find(d => d.id === dragon.id);
+
+        if (!fullDragonData) {
+            return reply('Could not find the full data for this dragon.');
+        }
+
+        const allMoves = fullDragonData.moveset || fullDragonData.moves;
+        dragon.moves = getRandomMoves(allMoves, 4);
+        savePlayer();
+
+        await reply(`You have re-rolled the moves for your ${dragon.name}.`);
         break;
       }
 
@@ -1021,7 +1413,8 @@ This command allows you to remove a move from your dragon's moveset to make spac
         if (!targetId) return reply('You need to mention a user to ship with.');
         const targetPlayer = getPlayer(targetId);
         const compatibility = Math.floor(Math.random() * 101);
-        await reply(`Your compatibility with ${targetPlayer.name} is ${compatibility}%.`);
+        const comment = getShipComment(compatibility);
+        await reply(`Your compatibility with ${targetPlayer.name} is ${compatibility}%.\n${comment}`);
         break;
       }
 
@@ -1040,6 +1433,74 @@ This command allows you to remove a move from your dragon's moveset to make spac
         const targetPlayer = getPlayer(targetId);
         const stupidRate = Math.floor(Math.random() * 101);
         await reply(`${targetPlayer.name} is ${stupidRate}% stupid.`);
+        break;
+      }
+
+      case 'spawncard': {
+        if (activeCardSpawns[from]) {
+            return reply('A card has already been spawned. Use %claim to get it.');
+        }
+
+        let randomCard;
+        const tierArg = args.find(a => a.startsWith('--tier'));
+
+        if (tierArg) {
+            if (!hasRole('mod')) {
+                return reply('You do not have permission to spawn cards of a specific tier.');
+            }
+            const tier = tierArg.split('=')[1];
+            if (!tier) {
+                return reply('Please specify a tier. Usage: `%spawncard --tier=<tier>`');
+            }
+
+            const filteredCards = cards.filter(c => c.tier.toLowerCase() === tier.toLowerCase());
+            if (filteredCards.length === 0) {
+                return reply(`No cards found for tier ${tier}.`);
+            }
+            randomCard = filteredCards[Math.floor(Math.random() * filteredCards.length)];
+        } else {
+            randomCard = cards[Math.floor(Math.random() * cards.length)];
+        }
+
+        activeCardSpawns[from] = randomCard;
+
+        try {
+            const imageUrl = randomCard.imageUrl;
+            const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+            const imageBuffer = Buffer.from(response.data, 'binary');
+
+            let caption = `A wild card has appeared!\n\n`;
+            caption += `*${randomCard.name}* (Tier: ${randomCard.tier})\n\n`;
+            caption += `Use \`%claim\` to add it to your collection!`;
+
+            await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
+        } catch (error) {
+            console.error('Error sending card image:', error);
+            let fallbackText = `A wild card has appeared!\n\n`;
+            fallbackText += `*${randomCard.name}* (Tier: ${randomCard.tier})\n\n`;
+            fallbackText += `Use \`%claim\` to add it to your collection!`;
+            await reply(fallbackText);
+        }
+        break;
+      }
+
+      case 'claim': {
+        const card = activeCardSpawns[from];
+        if (!card) {
+            return reply('There is no card to claim.');
+        }
+
+        if (player.deck.length < 12) {
+            player.deck.push(card);
+            await reply(`You have claimed the ${card.name} card! It has been added to your deck.`);
+        } else {
+            player.holder.push(card);
+            await reply(`You have claimed the ${card.name} card! Your deck is full, so it has been sent to your card holder.`);
+        }
+
+        savePlayer();
+        delete activeCardSpawns[from];
+
         break;
       }
 
