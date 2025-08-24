@@ -15,6 +15,7 @@ const dragons = require('./dragonData');
 const ytdlp = require('ytdlp-nodejs');
 const shop = require('./shop.js');
 const cards = require('./cardData.js');
+const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
 
 const OWNER_NAME = 'ⱠΔ₩–ⱠΞƧƧ ⱣⱧΔ₥ŦØ₥';
 const OWNER_JID = '26775949123@s.whatsapp.net';
@@ -22,7 +23,7 @@ const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
 const rolesHierarchy = ['user', 'mod', 'owner'];
 const cooldowns = {
-  spawn: 10 * 60 * 1000,
+  spawn: 5 * 60 * 1000,
   train: 15 * 60 * 1000,
 };
 const MAX_LEVEL = 100;
@@ -121,6 +122,29 @@ async function main() {
     const sender = msg.key.participant || msg.key.remoteJid;
     const from = msg.key.remoteJid;
     const messageContent = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+
+    // Anti-Link Feature
+    if (from.endsWith('@g.us')) {
+        const groupSettings = getGroupSettings(from);
+        if (groupSettings.antilink) {
+            const linkRegex = /(https?:\/\/[^\s]+)/g;
+            if (linkRegex.test(messageContent)) {
+                const isAdmin = await isGroupAdmin(from, sender);
+                if (!isAdmin && !hasRole('owner')) {
+                    await reply('Links are not allowed in this group. Removing user...');
+                    try {
+                        await sock.groupParticipantsUpdate(from, [sender], "remove");
+                        // Deleting the message is more complex and requires storing the message key.
+                        // For now, we will just remove the user.
+                    } catch (error) {
+                        console.error('Error removing user for sending link:', error);
+                        await reply('I could not remove the user. Am I an admin?');
+                    }
+                }
+            }
+        }
+    }
+
     if (!messageContent.startsWith(PREFIX)) return;
 
     const args = messageContent.slice(PREFIX.length).trim().split(/ +/);
@@ -139,6 +163,17 @@ async function main() {
     player.holder = player.holder || [];
 
     const savePlayer = () => updatePlayer(player);
+
+    const isGroupAdmin = async (jid, participant) => {
+        try {
+            const groupMetadata = await sock.groupMetadata(jid);
+            const participantInfo = groupMetadata.participants.find(p => p.id === participant);
+            return participantInfo && (participantInfo.admin === 'admin' || participantInfo.admin === 'superadmin');
+        } catch (error) {
+            console.error('Error checking group admin status:', error);
+            return false;
+        }
+    };
 
     const hasRole = (role) =>
       role === 'owner' ? player.roles.includes('owner')
@@ -169,6 +204,7 @@ async function main() {
 %profile [@user] - View your or another user's profile.
 %leaderboard - View the richest players.
 %nickname <dragon_index> <new_name> - Give your dragon a nickname.
+%mods - View the list of bot moderators.
 %daily - Get a daily reward.
 %quests - View and complete quests.
 %dex <dragon_name_or_id> - View DragonDex information.
@@ -186,7 +222,7 @@ async function main() {
 %market - Access the player market.
 
 *Dragons:*
-%spawn - Spawn a wild dragon (cooldown 10m)
+%spawn - Spawn a wild dragon (5m cooldown, 1m exclusive catch).
 %catch <tool> - Catch the spawned wild dragon
 %party - View your active dragons (max 6)
 %den - View your dragon den (storage)
@@ -238,7 +274,7 @@ async function main() {
 %unban @user - Unban a user.
 %kick @user - Kick a user from the group.
 %wild on/off - Enable/disable wild spawns (mods only)
-%spawnwild <Dragon Name> <Level> - Spawn a specific high-level dragon.
+%huntdragon <Dragon Name> <Level> - Spawn a specific high-level dragon.
 %givegold @user <amount> - Give gold to user (owner only)
 %re-roll <dragon_index> - Re-roll a dragon's moves (owner/mod only).
 
@@ -255,6 +291,11 @@ async function main() {
 %antidelete <on/off> - Enable or disable anti-delete.
 %autoreact <on/off> - Enable or disable auto-react.
 
+*Group Admin (Bot must be admin):*
+%modes <feature> <on|off> - Enable or disable features for this group.
+%open - Open the group for all members to send messages.
+%close - Close the group for only admins to send messages.
+
 *Downloader:*
 %play <song_name> - Play a song from YouTube.
 %youtube <mp3/mp4> <url> - Download from YouTube.
@@ -269,7 +310,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn');
         }
 
         switch (guideName) {
@@ -323,13 +364,33 @@ This command allows you to remove a move from your dragon's moveset to make spac
 - Example: \`%givecard deck 3 @user\` to give the 3rd card from your deck.`
                 );
                 break;
+            case 'modes':
+                await reply(
+`*Guide: %modes*
+This command is for group admins to configure the bot's features in their group.
+- Usage: \`%modes <feature> <on|off>\`
+- Available features:
+  - \`antilink\`: Automatically deletes messages with links and removes the sender.
+  - \`slot\`: Enables or disables the \`%slot\` command in the group.`
+                );
+                break;
+            case 'spawn':
+                await reply(
+`*Guide: %spawn*
+This command spawns a wild dragon.
+- There is a 5-minute cooldown for this command.
+- When you spawn a dragon, you have a 1-minute exclusive window to catch it.
+- After 1 minute, the dragon becomes available for anyone to catch.
+- The dragon will fly away after 3 minutes if it's not caught.`
+                );
+                break;
             default:
                 await reply('Invalid guide name. Use `%guide` to see the list of available guides.');
         }
         break;
       }
 
-      case 'spawnwild': {
+      case 'huntdragon': {
         if (!hasRole('mod')) return reply('You do not have permission to use this command.');
         if (activeWildEncounters[from]) return reply('A wild dragon has already spawned in this chat. Use %catch or defeat it first.');
 
@@ -337,7 +398,7 @@ This command allows you to remove a move from your dragon's moveset to make spac
         const level = parseInt(args[args.length - 1]);
 
         if (!dragonName || isNaN(level) || level <= 0) {
-            return reply('Invalid usage. Use `%spawnwild <Dragon Name> <Level>`.');
+            return reply('Invalid usage. Use `%huntdragon <Dragon Name> <Level>`.');
         }
 
         const dragonData = dragons.find(d => d.name.toLowerCase() === dragonName.toLowerCase());
@@ -508,6 +569,67 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
+      case 'modes': {
+        if (!from.endsWith('@g.us')) {
+            return reply('This command can only be used in groups.');
+        }
+        if (!await isGroupAdmin(from, sender)) {
+            return reply('Only group admins can use this command.');
+        }
+
+        const feature = args[0]?.toLowerCase();
+        const option = args[1]?.toLowerCase();
+
+        if (!feature || !option || (option !== 'on' && option !== 'off')) {
+            return reply('Usage: %modes <feature> <on|off>\nAvailable features: antilink, slot, wild');
+        }
+
+        const groupSettings = getGroupSettings(from);
+        if (groupSettings[feature] === undefined) {
+            return reply(`Invalid feature: ${feature}. Available features: antilink, slot, wild`);
+        }
+
+        groupSettings[feature] = option === 'on';
+        updateGroupSettings(groupSettings);
+
+        await reply(`${feature} has been turned ${option} for this group.`);
+        break;
+      }
+
+      case 'open': {
+        if (!from.endsWith('@g.us')) {
+            return reply('This command can only be used in groups.');
+        }
+        if (!await isGroupAdmin(from, sender)) {
+            return reply('Only group admins can use this command.');
+        }
+        try {
+            await sock.groupSettingUpdate(from, 'not_announcement');
+            await reply('Group opened.');
+        } catch (error) {
+            console.error('Error opening group:', error);
+            await reply('I could not open the group. Am I an admin?');
+        }
+        break;
+      }
+
+      case 'close': {
+        if (!from.endsWith('@g.us')) {
+            return reply('This command can only be used in groups.');
+        }
+        if (!await isGroupAdmin(from, sender)) {
+            return reply('Only group admins can use this command.');
+        }
+        try {
+            await sock.groupSettingUpdate(from, 'announcement');
+            await reply('Group closed.');
+        } catch (error) {
+            console.error('Error closing group:', error);
+            await reply('I could not close the group. Am I an admin?');
+        }
+        break;
+      }
+
       case 'kick': {
         if (!hasRole('mod')) return reply('You do not have permission to use this command.');
         const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -547,6 +669,13 @@ This command allows you to remove a move from your dragon's moveset to make spac
       }
 
       case 'slot': {
+        if (from.endsWith('@g.us')) {
+            const groupSettings = getGroupSettings(from);
+            if (!groupSettings.slot) {
+                return reply('The slot machine is disabled in this group.');
+            }
+        }
+
         const amount = parseInt(args[0]);
         if (isNaN(amount) || amount <= 0) return reply('Enter a valid gold amount to gamble.');
         if (amount > 1_000_000) return reply('You can only slot up to 1,000,000 gold at once.');
@@ -618,20 +747,6 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
-      case 'wild': {
-        if (!hasRole('mod')) return reply('Only mods and owners can toggle wild spawns.');
-        const option = args[0]?.toLowerCase();
-        if (option === 'on') {
-          wildSpawnsEnabled.enabled = true;
-          await reply('Wild spawns enabled.');
-        } else if (option === 'off') {
-          wildSpawnsEnabled.enabled = false;
-          await reply('Wild spawns disabled.');
-        } else {
-          await reply('Usage: %wild on/off');
-        }
-        break;
-      }
 
       case 'start-hunt': {
         if (player.party.length > 0 || player.den.length > 0) {
@@ -925,20 +1040,47 @@ This command allows you to remove a move from your dragon's moveset to make spac
 
         const randomDragon = { ...dragons[Math.floor(Math.random() * dragons.length)] };
         const totalDamage = randomDragon.moves.reduce((sum, move) => sum + move.damage, 0);
-        randomDragon.hp = totalDamage * 5; // Simple HP calculation
+        randomDragon.hp = totalDamage * 5;
 
-        activeWildEncounters[from] = { ...randomDragon, captured: false };
+        activeWildEncounters[from] = {
+            dragon: randomDragon,
+            captured: false,
+            spawnerId: sender,
+            spawnTime: now,
+            isExclusive: true
+        };
+
         player.cooldowns.spawn = now;
         savePlayer();
 
-        await reply(`A wild ${randomDragon.name} (HP: ${randomDragon.hp}) has appeared! Use %attack to battle it.`);
+        await reply(`A wild ${randomDragon.name} (HP: ${randomDragon.hp}) has appeared! You have 1 minute to catch it before it becomes available to everyone.`);
+
+        setTimeout(async () => {
+            if (activeWildEncounters[from] && activeWildEncounters[from].isExclusive) {
+                activeWildEncounters[from].isExclusive = false;
+                await sock.sendMessage(from, { text: `Your time limit is up, anyone can hunt this dragon now!` });
+            }
+        }, 1 * 60 * 1000);
+
+        setTimeout(async () => {
+            if (activeWildEncounters[from] && !activeWildEncounters[from].captured) {
+                delete activeWildEncounters[from];
+                await sock.sendMessage(from, { text: `The wild ${randomDragon.name} flew away.` });
+            }
+        }, 3 * 60 * 1000);
         break;
       }
 
       case 'attack': {
         if (activeBattles[from]) return reply('You are already in a battle.');
-        const wildDragon = activeWildEncounters[from];
-        if (!wildDragon) return reply('There is no wild dragon to attack.');
+        const wildEncounter = activeWildEncounters[from];
+        if (!wildEncounter) return reply('There is no wild dragon to attack.');
+
+        if (wildEncounter.isExclusive && wildEncounter.spawnerId !== sender) {
+            return reply('This dragon was spawned by another player. You must wait until their exclusive time is up.');
+        }
+
+        const wildDragon = wildEncounter.dragon;
         if (player.party.length === 0) return reply('You have no dragons in your party to battle with.');
 
         const playerDragon = { ...player.party[0] };
@@ -965,8 +1107,14 @@ This command allows you to remove a move from your dragon's moveset to make spac
       }
 
       case 'catch': {
-        const wildDragon = activeWildEncounters[from];
-        if (!wildDragon) return reply('There is no wild dragon to catch.');
+        const wildEncounter = activeWildEncounters[from];
+        if (!wildEncounter) return reply('There is no wild dragon to catch.');
+
+        if (wildEncounter.isExclusive && wildEncounter.spawnerId !== sender) {
+            return reply('This dragon was spawned by another player. You must wait until their exclusive time is up.');
+        }
+
+        const wildDragon = wildEncounter.dragon;
         if (activeBattles[from]) return reply('You cannot catch a dragon while in battle.');
 
         const tool = args[0]?.toLowerCase();
@@ -1464,6 +1612,23 @@ This command allows you to remove a move from your dragon's moveset to make spac
         break;
       }
 
+      case 'mods': {
+        const allPlayers = Object.values(getAllPlayers());
+        const mods = allPlayers.filter(p => p.roles.includes('mod') || p.roles.includes('owner'));
+
+        if (mods.length === 0) {
+            return reply('There are no mods or owners.');
+        }
+
+        let response = '*Bot Moderators & Owners:*\n\n';
+        mods.forEach(mod => {
+            response += `- ${mod.name}\n`;
+        });
+
+        await reply(response);
+        break;
+      }
+
       case 'spawncard': {
         if (activeCardSpawns[from]) {
             return reply('A card has already been spawned. Use %claim to get it.');
@@ -1650,6 +1815,27 @@ This command allows you to remove a move from your dragon's moveset to make spac
         await reply('Unknown command. Type %help for the command list.');
     }
   });
+  setInterval(async () => {
+    const allGroupSettings = getGroupSettings();
+    for (const groupId in allGroupSettings) {
+        if (allGroupSettings[groupId].wild && !activeWildEncounters[groupId]) {
+            const randomDragon = { ...dragons[Math.floor(Math.random() * dragons.length)] };
+            const totalDamage = randomDragon.moves.reduce((sum, move) => sum + move.damage, 0);
+            randomDragon.hp = totalDamage * 5;
+
+            activeWildEncounters[groupId] = { dragon: randomDragon, captured: false, spawnTime: Date.now() };
+
+            await sock.sendMessage(groupId, { text: `A wild ${randomDragon.name} (HP: ${randomDragon.hp}) has appeared! Use %attack to battle it.` });
+
+            setTimeout(async () => {
+                if (activeWildEncounters[groupId] && !activeWildEncounters[groupId].captured) {
+                    delete activeWildEncounters[groupId];
+                    await sock.sendMessage(groupId, { text: `The wild ${randomDragon.name} flew away.` });
+                }
+            }, 3 * 60 * 1000);
+        }
+    }
+  }, 5 * 60 * 1000);
 }
 
 main();
