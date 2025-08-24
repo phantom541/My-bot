@@ -25,6 +25,7 @@ function getGroupSettings(groupId) {
       antilink: false,
       slot: false,
       wild: false,
+      wildcard: false,
     };
     saveGroupSettings(settings);
   }

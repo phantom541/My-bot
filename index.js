@@ -19,6 +19,10 @@ const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
 
 const OWNER_NAME = 'ⱠΔ₩–ⱠΞƧƧ ⱣⱧΔ₥ŦØ₥';
 const OWNER_JID = '26775949123@s.whatsapp.net';
+const GIPHY_API_KEY = 'Pkfeqgcgi4LsgiR677BoTBWKN2utJrAl';
+const CARD_CLAIM_COST = 100;
+const CARD_PACK_COST = 300;
+const CARD_PACK_SIZE = 3;
 const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
 const rolesHierarchy = ['user', 'mod', 'owner'];
@@ -34,6 +38,30 @@ const RANKS = [
     'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master',
     'Grandmaster', 'Elder', 'Legendary', 'Mythic', 'Titan', 'Dragon Master'
 ];
+
+const typeEffectiveness = {
+    'Fire': { strongAgainst: ['Metal', 'Ice'], weakAgainst: ['Water'] },
+    'Water': { strongAgainst: ['Fire', 'Earth'], weakAgainst: ['Lightning'] },
+    'Earth': { strongAgainst: ['Lightning', 'Metal'], weakAgainst: ['Water', 'Wind'] },
+    'Wind': { strongAgainst: ['Earth'], weakAgainst: ['Ice'] },
+    'Ice': { strongAgainst: ['Wind', 'Shadow'], weakAgainst: ['Fire', 'Metal'] },
+    'Lightning': { strongAgainst: ['Water'], weakAgainst: ['Earth', 'Shadow'] },
+    'Metal': { strongAgainst: ['Ice'], weakAgainst: ['Fire', 'Earth'] },
+    'Shadow': { strongAgainst: ['Lightning'], weakAgainst: ['Ice'] }
+};
+
+function getEffectiveness(moveType, targetDragonType) {
+    const effectivenessInfo = typeEffectiveness[moveType];
+    if (effectivenessInfo) {
+        if (effectivenessInfo.strongAgainst.includes(targetDragonType)) {
+            return 1.5; // Super effective
+        }
+        if (effectivenessInfo.weakAgainst.includes(targetDragonType)) {
+            return 0.5; // Not very effective
+        }
+    }
+    return 1; // Normal effectiveness
+}
 
 function getRank(level) {
     const rankIndex = Math.floor((level - 1) / 10);
@@ -260,7 +288,8 @@ async function main() {
 
 *Card Collecting:*
 %spawncard [--tier=<tier>] - Spawn a random card (optionally of a specific tier, mods only).
-%claim - Claim a spawned card.
+%claim - Claim a spawned card (costs 100 gold).
+%buypack - Buy a pack of 3 random cards for 300 gold.
 %cards - View your card collection (deck and holder).
 %spawnpack6 - Spawn a 6-card pack with guaranteed high-tier cards.
 %spawnpack7 - Spawn a 7-card pack with one card from each tier.
@@ -351,9 +380,17 @@ This command allows you to remove a move from your dragon's moveset to make spac
             case 'cards':
                 await reply(
 `*Guide: Card Collecting*
+The bot features a vast collection of cards, including Dragon cards from Yu-Gi-Oh! and animated GIFs from the world of anime.
+
+*Getting Cards:*
+- *Spawning:* Use \`%spawncard\` to make a new card appear in the chat.
+- *Claiming:* When a card appears (either from \`%spawncard\` or an automatic "wild card" spawn), use \`%claim\` to add it to your collection. This costs 100 gold.
+- *Buying Packs:* Use \`%buypack\` to purchase a pack of 3 random cards/GIFs for 300 gold.
+
+*Managing Your Collection:*
 - Your collection is split into a \`deck\` (max 12 cards) and a \`holder\` (unlimited storage).
 - Use \`%cards\` to view your deck and holder.
-- Use \`%movetodeck <holder_index>\` and \`%movetoholder <deck_index>\` to organize your collection.`
+- Use \`%movetodeck <holder_index>\` and \`%movetoholder <deck_index>\` to organize your cards.`
                 );
                 break;
             case 'givecard':
@@ -371,7 +408,9 @@ This command is for group admins to configure the bot's features in their group.
 - Usage: \`%modes <feature> <on|off>\`
 - Available features:
   - \`antilink\`: Automatically deletes messages with links and removes the sender.
-  - \`slot\`: Enables or disables the \`%slot\` command in the group.`
+  - \`slot\`: Enables or disables the \`%slot\` command in the group.
+  - \`wild\`: Enables or disables automatic wild dragon spawns.
+  - \`wildcard\`: Enables or disables automatic card/GIF spawns.`
                 );
                 break;
             case 'spawn':
@@ -386,6 +425,21 @@ This command spawns a wild dragon.
                 break;
             default:
                 await reply('Invalid guide name. Use `%guide` to see the list of available guides.');
+        }
+        break;
+      }
+
+      case 'wild': {
+        if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+        const option = args[0]?.toLowerCase();
+        if (option === 'on') {
+            wildSpawnsEnabled.enabled = true;
+            await reply('Wild dragon spawns have been enabled globally.');
+        } else if (option === 'off') {
+            wildSpawnsEnabled.enabled = false;
+            await reply('Wild dragon spawns have been disabled globally.');
+        } else {
+            await reply('Usage: %wild <on/off>');
         }
         break;
       }
@@ -581,12 +635,12 @@ This command spawns a wild dragon.
         const option = args[1]?.toLowerCase();
 
         if (!feature || !option || (option !== 'on' && option !== 'off')) {
-            return reply('Usage: %modes <feature> <on|off>\nAvailable features: antilink, slot, wild');
+            return reply('Usage: %modes <feature> <on|off>\nAvailable features: antilink, slot, wild, wildcard');
         }
 
         const groupSettings = getGroupSettings(from);
         if (groupSettings[feature] === undefined) {
-            return reply(`Invalid feature: ${feature}. Available features: antilink, slot, wild`);
+            return reply(`Invalid feature: ${feature}. Available features: antilink, slot, wild, wildcard`);
         }
 
         groupSettings[feature] = option === 'on';
@@ -775,7 +829,8 @@ This command spawns a wild dragon.
             }
 
             if (args.includes('--choose')) {
-                player.party.push(selectedDragon);
+                const newDragon = { ...selectedDragon, level: 5, xp: 0 };
+                player.party.push(newDragon);
                 savePlayer();
                 return reply(`Congratulations! You have chosen ${selectedDragon.name} as your starter dragon!`);
             } else {
@@ -1039,8 +1094,9 @@ This command spawns a wild dragon.
         }
 
         const randomDragon = { ...dragons[Math.floor(Math.random() * dragons.length)] };
+        randomDragon.level = Math.floor(Math.random() * 16) + 5; // Level 5-20
         const totalDamage = randomDragon.moves.reduce((sum, move) => sum + move.damage, 0);
-        randomDragon.hp = totalDamage * 5;
+        randomDragon.hp = Math.floor((totalDamage * 5) * (1 + randomDragon.level / 10));
 
         activeWildEncounters[from] = {
             dragon: randomDragon,
@@ -1083,9 +1139,9 @@ This command spawns a wild dragon.
         const wildDragon = wildEncounter.dragon;
         if (player.party.length === 0) return reply('You have no dragons in your party to battle with.');
 
-        const playerDragon = { ...player.party[0] };
+        const playerDragon = { level: 5, xp: 0, ...player.party[0] };
         const totalPlayerDamage = playerDragon.moves.reduce((sum, move) => sum + move.damage, 0);
-        playerDragon.hp = totalPlayerDamage * 5;
+        playerDragon.hp = Math.floor((totalPlayerDamage * 5) * (1 + playerDragon.level / 10));
 
         activeBattles[from] = {
             player,
@@ -1634,45 +1690,50 @@ This command spawns a wild dragon.
             return reply('A card has already been spawned. Use %claim to get it.');
         }
 
-        let randomCard;
-        const tierArg = args.find(a => a.startsWith('--tier'));
-
-        if (tierArg) {
-            if (!hasRole('mod')) {
-                return reply('You do not have permission to spawn cards of a specific tier.');
-            }
-            const tier = tierArg.split('=')[1];
-            if (!tier) {
-                return reply('Please specify a tier. Usage: `%spawncard --tier=<tier>`');
-            }
-
-            const filteredCards = cards.filter(c => c.tier.toLowerCase() === tier.toLowerCase());
-            if (filteredCards.length === 0) {
-                return reply(`No cards found for tier ${tier}.`);
-            }
-            randomCard = filteredCards[Math.floor(Math.random() * filteredCards.length)];
-        } else {
-            randomCard = cards[Math.floor(Math.random() * cards.length)];
-        }
-
-        activeCardSpawns[from] = randomCard;
-
         try {
-            const imageUrl = randomCard.imageUrl;
-            const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-            const imageBuffer = Buffer.from(response.data, 'binary');
+            let cardToSpawn;
+            const spawnType = Math.random() < 0.5 ? 'dragon_card' : 'anime_gif';
+
+            if (spawnType === 'dragon_card') {
+                const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
+                const dragonCards = response.data.data;
+                const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
+
+                cardToSpawn = {
+                    name: randomDragonCard.name,
+                    tier: 'Dragon',
+                    imageUrl: randomDragonCard.card_images[0].image_url,
+                    type: 'dragon_card'
+                };
+            } else { // anime_gif
+                const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
+                const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+                const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
+                const gifs = response.data.data;
+                const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+
+                cardToSpawn = {
+                    name: randomGif.title || 'Anime GIF',
+                    tier: 'Anime',
+                    imageUrl: randomGif.images.original.url.split('?')[0], // Get clean URL
+                    type: 'anime_gif'
+                };
+            }
+
+            activeCardSpawns[from] = cardToSpawn;
+
+            const imageResponse = await axios.get(cardToSpawn.imageUrl, { responseType: 'arraybuffer' });
+            const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
             let caption = `A wild card has appeared!\n\n`;
-            caption += `*${randomCard.name}* (Tier: ${randomCard.tier})\n\n`;
+            caption += `*${cardToSpawn.name}* (Tier: ${cardToSpawn.tier})\n\n`;
             caption += `Use \`%claim\` to add it to your collection!`;
 
             await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
+
         } catch (error) {
-            console.error('Error sending card image:', error);
-            let fallbackText = `A wild card has appeared!\n\n`;
-            fallbackText += `*${randomCard.name}* (Tier: ${randomCard.tier})\n\n`;
-            fallbackText += `Use \`%claim\` to add it to your collection!`;
-            await reply(fallbackText);
+            console.error('Error fetching or sending card:', error);
+            await reply('Sorry, I could not spawn a card at this time. Please try again later.');
         }
         break;
       }
@@ -1683,12 +1744,18 @@ This command spawns a wild dragon.
             return reply('There is no card to claim.');
         }
 
+        if (player.gold < CARD_CLAIM_COST) {
+            return reply(`You need ${CARD_CLAIM_COST} gold to claim this card. You only have ${player.gold}.`);
+        }
+
+        player.gold -= CARD_CLAIM_COST;
+
         if (player.deck.length < 12) {
             player.deck.push(card);
-            await reply(`You have claimed the ${card.name} card! It has been added to your deck.`);
+            await reply(`You spent ${CARD_CLAIM_COST} gold and claimed the ${card.name} card! It has been added to your deck.`);
         } else {
             player.holder.push(card);
-            await reply(`You have claimed the ${card.name} card! Your deck is full, so it has been sent to your card holder.`);
+            await reply(`You spent ${CARD_CLAIM_COST} gold and claimed the ${card.name} card! Your deck is full, so it has been sent to your card holder.`);
         }
 
         savePlayer();
@@ -1697,80 +1764,66 @@ This command spawns a wild dragon.
         break;
       }
 
+      case 'buypack': {
+        if (player.gold < CARD_PACK_COST) {
+            return reply(`You need ${CARD_PACK_COST} gold to buy a card pack. You only have ${player.gold}.`);
+        }
+
+        player.gold -= CARD_PACK_COST;
+        await reply(`You spent ${CARD_PACK_COST} gold and bought a card pack! Fetching your cards...`);
+
+        const newCards = [];
+        try {
+            for (let i = 0; i < CARD_PACK_SIZE; i++) {
+                let cardToSpawn;
+                const spawnType = Math.random() < 0.5 ? 'dragon_card' : 'anime_gif';
+
+                if (spawnType === 'dragon_card') {
+                    const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
+                    const dragonCards = response.data.data;
+                    const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
+                    cardToSpawn = { name: randomDragonCard.name, tier: 'Dragon', imageUrl: randomDragonCard.card_images[0].image_url, type: 'dragon_card' };
+                } else {
+                    const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
+                    const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+                    const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
+                    const gifs = response.data.data;
+                    const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+                    cardToSpawn = { name: randomGif.title || 'Anime GIF', tier: 'Anime', imageUrl: randomGif.images.original.url.split('?')[0], type: 'anime_gif' };
+                }
+                newCards.push(cardToSpawn);
+
+                if (player.deck.length < 12) {
+                    player.deck.push(cardToSpawn);
+                } else {
+                    player.holder.push(cardToSpawn);
+                }
+            }
+
+            savePlayer();
+
+            let packContents = 'Your new pack contains:\n\n';
+            newCards.forEach(card => {
+                packContents += `- ${card.name} (Tier: ${card.tier})\n`;
+            });
+            packContents += '\nThese have been added to your collection.';
+            await reply(packContents);
+
+        } catch (error) {
+            console.error('Error fetching card pack:', error);
+            player.gold += CARD_PACK_COST; // Refund on error
+            savePlayer();
+            await reply('Sorry, there was an error creating your card pack. Your gold has been refunded.');
+        }
+        break;
+      }
+
       case 'battle': {
-        if (args[0] === 'fight') {
-            const battle = activeBattles[from];
-            if (!battle) return reply('You are not in a battle.');
+        const battle = activeBattles[from];
+        const subCommand = args[0]?.toLowerCase();
 
-            const currentPlayerKey = battle.turn;
-            const opponentPlayerKey = currentPlayerKey === 'player1' ? 'player2' : 'player1';
-
-            if (battle[currentPlayerKey].id !== sender) return reply('It is not your turn.');
-
-            const moveIndex = parseInt(args[1]) - 1;
-            if (isNaN(moveIndex) || moveIndex < 0 || moveIndex >= battle[currentPlayerKey].dragon.moves.length) {
-                return reply('Invalid move selection. Use a number between 1 and 4.');
-            }
-
-            const move = battle[currentPlayerKey].dragon.moves[moveIndex];
-            battle[opponentPlayerKey].dragon.hp -= move.damage;
-
-            let battleReport = `${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} used ${move.name} and dealt ${move.damage} damage!\n`;
-            battleReport += `${battle[opponentPlayerKey].player.name}'s ${battle[opponentPlayerKey].dragon.name} has ${battle[opponentPlayerKey].dragon.hp} HP remaining.\n\n`;
-
-            if (battle[opponentPlayerKey].dragon.hp <= 0) {
-                battleReport += `*${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} wins!*`;
-
-                const winner = battle[currentPlayerKey].player;
-                const winnerDragon = battle[currentPlayerKey].dragon;
-                const loserDragon = battle[opponentPlayerKey].dragon;
-
-                // Dragon XP
-                const xpGained = loserDragon.level * XP_GAIN_MULTIPLIER;
-                winnerDragon.xp += xpGained;
-                battleReport += `\nYour ${winnerDragon.name} gained ${xpGained} XP!`;
-
-                if (winnerDragon.xp >= winnerDragon.level * XP_PER_LEVEL) {
-                    winnerDragon.level++;
-                    winnerDragon.xp = 0;
-                    battleReport += `\n*Congratulations! Your ${winnerDragon.name} grew to level ${winnerDragon.level}!*`;
-
-                    const fullDragonData = dragons.find(d => d.id === winnerDragon.id);
-                    if (fullDragonData) {
-                        const allMoves = fullDragonData.moveset || fullDragonData.moves;
-                        const newMove = allMoves.find(m => !winnerDragon.moves.some(wm => wm.name === m.name));
-                        if (newMove) {
-                            if (winnerDragon.moves.length < 4) {
-                                winnerDragon.moves.push(newMove);
-                                battleReport += `\nYour ${winnerDragon.name} learned ${newMove.name}!`;
-                            } else {
-                                battleReport += `\nYour ${winnerDragon.name} wants to learn ${newMove.name}, but it already knows 4 moves. Use \`%remove <move_name>\` to make space for a new move.`;
-                            }
-                        }
-                    }
-                }
-
-                // Player XP
-                winner.playerXp += PLAYER_XP_GAIN;
-                battleReport += `\nYou gained ${PLAYER_XP_GAIN} player XP!`;
-
-                if (winner.playerXp >= winner.playerLevel * 100) {
-                    winner.playerLevel++;
-                    winner.playerXp = 0;
-                    battleReport += `\n*Congratulations! You reached level ${winner.playerLevel} and are now a ${getRank(winner.playerLevel)}!*`;
-                }
-
-                updatePlayer(winner);
-                delete activeBattles[from];
-                return reply(battleReport);
-            }
-
-            battle.turn = opponentPlayerKey;
-
-            battleReport += `It's ${battle[opponentPlayerKey].player.name}'s turn! Use \`%battle fight <1-4>\` to attack.`;
-            await reply(battleReport);
-
-        } else {
+        if (!battle) {
+            // Start a new battle
             if (activeBattles[from]) return reply('A battle is already in progress in this chat.');
 
             const opponentId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -1783,14 +1836,14 @@ This command spawns a wild dragon.
             if (player.party.length === 0) return reply('You have no dragons in your party to battle with.');
             if (opponent.party.length === 0) return reply(`${opponent.name} has no dragons in their party.`);
 
-            const playerDragon = { ...player.party[0] };
-            const opponentDragon = { ...opponent.party[0] };
+            const playerDragon = { level: 5, xp: 0, ...player.party[0] };
+            const opponentDragon = { level: 5, xp: 0, ...opponent.party[0] };
 
             const totalPlayerDamage = playerDragon.moves.reduce((sum, move) => sum + move.damage, 0);
-            playerDragon.hp = totalPlayerDamage * 5;
+            playerDragon.hp = Math.floor((totalPlayerDamage * 5) * (1 + playerDragon.level / 10));
 
             const totalOpponentDamage = opponentDragon.moves.reduce((sum, move) => sum + move.damage, 0);
-            opponentDragon.hp = totalOpponentDamage * 5;
+            opponentDragon.hp = Math.floor((totalOpponentDamage * 5) * (1 + opponentDragon.level / 10));
 
             activeBattles[from] = {
                 player1: { id: sender, player: player, dragon: playerDragon },
@@ -1807,6 +1860,196 @@ This command spawns a wild dragon.
             });
 
             await reply(battleGuide);
+            return;
+        }
+
+        // Handle sub-commands for an existing battle
+        switch (subCommand) {
+            case 'fight': {
+                const battle = activeBattles[from];
+                if (!battle) return reply('You are not in a battle.');
+
+                const currentPlayerKey = battle.turn;
+                const opponentPlayerKey = currentPlayerKey === 'player1' ? 'player2' : 'player1';
+
+                if (battle[currentPlayerKey].id !== sender) return reply('It is not your turn.');
+
+                const moveIndex = parseInt(args[1]) - 1;
+                if (isNaN(moveIndex) || moveIndex < 0 || moveIndex >= battle[currentPlayerKey].dragon.moves.length) {
+                    return reply('Invalid move selection. Use a number between 1 and 4.');
+                }
+
+                const move = battle[currentPlayerKey].dragon.moves[moveIndex];
+                const effectiveness = getEffectiveness(move.type, battle[opponentPlayerKey].dragon.type);
+                const damage = Math.floor(move.damage * effectiveness);
+                battle[opponentPlayerKey].dragon.hp -= damage;
+
+                let battleReport = `${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} used ${move.name} and dealt ${damage} damage!\n`;
+                if (effectiveness > 1) battleReport += "It's super effective!\n";
+                if (effectiveness < 1) battleReport += "It's not very effective...\n";
+                battleReport += `${battle[opponentPlayerKey].player.name}'s ${battle[opponentPlayerKey].dragon.name} has ${battle[opponentPlayerKey].dragon.hp > 0 ? battle[opponentPlayerKey].dragon.hp : 0} HP remaining.\n\n`;
+
+                if (battle[opponentPlayerKey].dragon.hp <= 0) {
+                    battleReport += `*${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} wins!*`;
+
+                    const winner = battle[currentPlayerKey].player;
+                    const winnerDragon = battle[currentPlayerKey].dragon;
+                    const loserDragon = battle[opponentPlayerKey].dragon;
+
+                    // Dragon XP
+                    const xpGained = loserDragon.level * XP_GAIN_MULTIPLIER;
+                    winnerDragon.xp += xpGained;
+                    battleReport += `\nYour ${winnerDragon.name} gained ${xpGained} XP!`;
+
+                    if (winnerDragon.xp >= winnerDragon.level * XP_PER_LEVEL) {
+                        winnerDragon.level++;
+                        winnerDragon.xp = 0;
+                        battleReport += `\n*Congratulations! Your ${winnerDragon.name} grew to level ${winnerDragon.level}!*`;
+
+                        const fullDragonData = dragons.find(d => d.id === winnerDragon.id);
+                        if (fullDragonData) {
+                            const allMoves = fullDragonData.moveset || fullDragonData.moves;
+                            const newMove = allMoves.find(m => !winnerDragon.moves.some(wm => wm.name === m.name));
+                            if (newMove) {
+                                if (winnerDragon.moves.length < 4) {
+                                    winnerDragon.moves.push(newMove);
+                                    battleReport += `\nYour ${winnerDragon.name} learned ${newMove.name}!`;
+                                } else {
+                                    battleReport += `\nYour ${winnerDragon.name} wants to learn ${newMove.name}, but it already knows 4 moves. Use \`%remove <move_name>\` to make space for a new move.`;
+                                }
+                            }
+                        }
+                    }
+
+                    // Player XP
+                    winner.playerXp += PLAYER_XP_GAIN;
+                    battleReport += `\nYou gained ${PLAYER_XP_GAIN} player XP!`;
+
+                    if (winner.playerXp >= winner.playerLevel * 100) {
+                        winner.playerLevel++;
+                        winner.playerXp = 0;
+                        battleReport += `\n*Congratulations! You reached level ${winner.playerLevel} and are now a ${getRank(winner.playerLevel)}!*`;
+                    }
+
+                    updatePlayer(winner);
+                    delete activeBattles[from];
+                    return reply(battleReport);
+                }
+
+                battle.turn = opponentPlayerKey;
+
+                battleReport += `It's ${battle[opponentPlayerKey].player.name}'s turn! Use \`%battle fight <1-4>\` to attack.`;
+                await reply(battleReport);
+                break;
+            }
+            case 'switch': {
+                const battle = activeBattles[from];
+                if (!battle) return reply('You are not in a battle.');
+
+                const currentPlayerKey = battle.turn;
+                if (battle[currentPlayerKey].id !== sender) return reply('It is not your turn.');
+
+                const position = parseInt(args[1]) - 1;
+                if (isNaN(position) || position < 0 || position >= player.party.length) {
+                    return reply('Invalid party position.');
+                }
+
+                const newDragon = player.party[position];
+                if (newDragon.id === battle[currentPlayerKey].dragon.id) {
+                    return reply('That dragon is already in battle.');
+                }
+
+                battle[currentPlayerKey].dragon = { ...newDragon };
+                const totalPlayerDamage = newDragon.moves.reduce((sum, move) => sum + move.damage, 0);
+                battle[currentPlayerKey].dragon.hp = totalPlayerDamage * 5;
+
+                battle.turn = currentPlayerKey === 'player1' ? 'player2' : 'player1';
+
+                await reply(`${player.name} switched to ${newDragon.name}. It's now ${battle[battle.turn].player.name}'s turn.`);
+                break;
+            }
+            case 'catch': {
+                const battle = activeBattles[from];
+                if (!battle) return reply('You are not in a battle.');
+
+                if (battle.player2) {
+                    return reply('You cannot catch another player\'s dragon.');
+                }
+
+                const wildDragon = battle.opponentDragon;
+                const tool = args[1]?.toLowerCase();
+                if (!tool) return reply('Please specify a tool to use for catching.');
+                if (!player.inventory[tool] || player.inventory[tool] <= 0) {
+                  return reply(`You don't have any ${tool}.`);
+                }
+
+                player.inventory[tool]--;
+
+                // Simple catch logic for now
+                const catchChance = (1 - (wildDragon.hp / (wildDragon.moves.reduce((s, m) => s + m.damage, 0) * 5))) * 0.5;
+                if (Math.random() < catchChance) {
+                    wildDragon.captured = true;
+                    player.den.push(wildDragon);
+
+                    delete activeBattles[from];
+                    if(activeWildEncounters[from]) delete activeWildEncounters[from];
+                    savePlayer();
+
+                    await reply(`Congratulations! You caught the ${wildDragon.name}! It has been sent to your den.`);
+                } else {
+                    await reply(`Oh no! The ${wildDragon.name} broke free!`);
+                    // Wild dragon's turn
+                    const wildMove = wildDragon.moves[Math.floor(Math.random() * wildDragon.moves.length)];
+                    const effectiveness = getEffectiveness(wildMove.type, battle.playerDragon.type);
+                    const damage = Math.floor(wildMove.damage * effectiveness);
+                    battle.playerDragon.hp -= damage;
+
+                    let battleReport = `The wild ${wildDragon.name} used ${wildMove.name} and dealt ${damage} damage!\n`;
+                    if (effectiveness > 1) battleReport += "It's super effective!\n";
+                    if (effectiveness < 1) battleReport += "It's not very effective...\n";
+                    battleReport += `Your ${battle.playerDragon.name} has ${battle.playerDragon.hp > 0 ? battle.playerDragon.hp : 0} HP remaining.\n\n`;
+
+                    if (battle.playerDragon.hp <= 0) {
+                        battleReport += `*Your ${battle.playerDragon.name} has fainted! You lose.*`;
+                        delete activeBattles[from];
+                        return reply(battleReport);
+                    }
+
+                    battleReport += `It's your turn!`;
+                    await reply(battleReport);
+                }
+                break;
+            }
+            case 'run': {
+                const battle = activeBattles[from];
+                if (!battle) return reply('You are not in a battle.');
+
+                if (battle.player2) {
+                    return reply('You cannot run from a player battle. Use `%battle forfeit` instead.');
+                }
+
+                delete activeBattles[from];
+                await reply('You ran away from the battle.');
+                break;
+            }
+
+            case 'forfeit': {
+                const battle = activeBattles[from];
+                if (!battle) return reply('You are not in a battle.');
+
+                if (!battle.player2) {
+                    return reply('You can only forfeit in a player battle. Use `%battle run` to escape from a wild dragon.');
+                }
+
+                const winner = battle.player1.id === sender ? battle.player2.player : battle.player1.player;
+                const loser = battle.player1.id === sender ? battle.player1.player : battle.player2.player;
+
+                delete activeBattles[from];
+                await reply(`${loser.name} has forfeited the battle. ${winner.name} wins!`);
+                break;
+            }
+            default:
+                await reply('Invalid battle command. Use `%battle fight`, `%battle switch`, `%battle catch`, `%battle run`, or `%battle forfeit`.');
         }
         break;
       }
@@ -1836,6 +2079,55 @@ This command spawns a wild dragon.
         }
     }
   }, 5 * 60 * 1000);
+
+  // Automatic Card Spawner
+  setInterval(async () => {
+    const allGroupSettings = loadGroupSettings();
+    for (const groupId in allGroupSettings) {
+        if (allGroupSettings[groupId].wildcard && !activeCardSpawns[groupId]) {
+            try {
+                let cardToSpawn;
+                const spawnType = Math.random() < 0.5 ? 'dragon_card' : 'anime_gif';
+
+                if (spawnType === 'dragon_card') {
+                    const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
+                    const dragonCards = response.data.data;
+                    const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
+                    cardToSpawn = { name: randomDragonCard.name, tier: 'Dragon', imageUrl: randomDragonCard.card_images[0].image_url, type: 'dragon_card' };
+                } else {
+                    const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
+                    const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+                    const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
+                    const gifs = response.data.data;
+                    const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+                    cardToSpawn = { name: randomGif.title || 'Anime GIF', tier: 'Anime', imageUrl: randomGif.images.original.url.split('?')[0], type: 'anime_gif' };
+                }
+
+                activeCardSpawns[groupId] = cardToSpawn;
+
+                const imageResponse = await axios.get(cardToSpawn.imageUrl, { responseType: 'arraybuffer' });
+                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+                let caption = `A wild card has appeared!\n\n`;
+                caption += `*${cardToSpawn.name}* (Tier: ${cardToSpawn.tier})\n\n`;
+                caption += `Use \`%claim\` to add it to your collection! It costs 100 gold.`;
+
+                await sock.sendMessage(groupId, { image: imageBuffer, caption: caption });
+
+                // Card disappears after 5 minutes
+                setTimeout(() => {
+                    if (activeCardSpawns[groupId] && activeCardSpawns[groupId].name === cardToSpawn.name) {
+                        delete activeCardSpawns[groupId];
+                        sock.sendMessage(groupId, { text: `The card "${cardToSpawn.name}" was not claimed and has disappeared.` });
+                    }
+                }, 5 * 60 * 1000);
+
+            } catch (error) {
+                console.error(`Error auto-spawning card in group ${groupId}:`, error);
+            }
+        }
+    }
+  }, 20 * 60 * 1000); // Every 20 minutes
 }
 
 main();
