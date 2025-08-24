@@ -16,6 +16,14 @@ const ytdlp = require('ytdlp-nodejs');
 const shop = require('./shop.js');
 const cards = require('./cardData.js');
 const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
+const cloudinary = require('cloudinary').v2;
+
+// Cloudinary Configuration
+cloudinary.config({
+  cloud_name: 'dgg6fak2e',
+  api_key: '472624818289699',
+  api_secret: 'trlLYWt16aTFgzc0cU1afuscQuM'
+});
 
 const OWNER_NAME = 'ⱠΔ₩–ⱠΞƧƧ ⱣⱧΔ₥ŦØ₥';
 const OWNER_JID = '26775949123@s.whatsapp.net';
@@ -68,7 +76,57 @@ function getRank(level) {
     return RANKS[rankIndex] || RANKS[RANKS.length - 1];
 }
 
+async function generateBattleImage(playerDragon, opponentDragon, environment) {
+    try {
+        const backgroundUrl = environment.bgUrl;
+
+        const playerDragonImg = { public_id: playerDragon.imageUrl, type: 'fetch' };
+        const opponentDragonImg = { public_id: opponentDragon.imageUrl, type: 'fetch' };
+
+        // Calculate HP percentages
+        const playerHpPercent = Math.floor((playerDragon.hp / (playerDragon.moves.reduce((s, m) => s + m.damage, 0) * 5 * (1 + playerDragon.level/10))) * 100);
+        const opponentHpPercent = Math.floor((opponentDragon.hp / (opponentDragon.moves.reduce((s, m) => s + m.damage, 0) * 5 * (1 + opponentDragon.level/10))) * 100);
+
+        const battleImageUrl = cloudinary.url(backgroundUrl, {
+            transformation: [
+                { width: 1280, height: 720, crop: 'fill' },
+                // Opponent Dragon
+                { overlay: opponentDragonImg, height: 300, gravity: 'east', x: -100, y: -50, effect: 'fliph' },
+                // Player Dragon
+                { overlay: playerDragonImg, height: 280, gravity: 'west', x: 100, y: 100 },
+
+                // --- UI Elements ---
+                // Player Info Box
+                { overlay: { resource_type: 'image', public_id: 'solid_black' }, width: 350, height: 100, gravity: 'south_west', x: 20, y: 20, opacity: 60 },
+                { overlay: { font_family: 'Arial', font_size: 24, text: `${playerDragon.name} (Lvl ${playerDragon.level})` }, gravity: 'south_west', x: 30, y: 90, color: 'white' },
+                { overlay: { resource_type: 'image', public_id: 'solid_gray' }, width: 300, height: 20, gravity: 'south_west', x: 30, y: 60 },
+                { overlay: { resource_type: 'image', public_id: 'solid_green' }, width: 3 * playerHpPercent, height: 20, gravity: 'south_west', x: 30, y: 60, crop: 'scale' },
+                { overlay: { font_family: 'Arial', font_size: 18, text: `HP: ${playerDragon.hp}` }, gravity: 'south_west', x: 150, y: 35, color: 'white' },
+
+                // Opponent Info Box
+                { overlay: { resource_type: 'image', public_id: 'solid_black' }, width: 350, height: 100, gravity: 'north_east', x: 20, y: 20, opacity: 60 },
+                { overlay: { font_family: 'Arial', font_size: 24, text: `${opponentDragon.name} (Lvl ${opponentDragon.level})` }, gravity: 'north_east', x: 30, y: 30, color: 'white' },
+                { overlay: { resource_type: 'image', public_id: 'solid_gray' }, width: 300, height: 20, gravity: 'north_east', x: 30, y: 60 },
+                { overlay: { resource_type: 'image', public_id: 'solid_green' }, width: 3 * opponentHpPercent, height: 20, gravity: 'north_east', x: 30, y: 60, crop: 'scale' },
+                { overlay: { font_family: 'Arial', font_size: 18, text: `HP: ${opponentDragon.hp}` }, gravity: 'north_east', x: 150, y: 85, color: 'white' },
+            ]
+        });
+
+        return battleImageUrl;
+    } catch (error) {
+        console.error("Error generating battle image:", error);
+        return null;
+    }
+}
+
 const wildSpawnsEnabled = { enabled: false };
+const BATTLE_ENVIRONMENTS = [
+    { name: "Fiery Volcano", bgUrl: "https://img.craftpix.net/2019/01/Free-Pixel-Art-Fantasy-2D-Battlegrounds2.jpg", boostedType: "Fire", boost: 0.15 },
+    { name: "Mystical Forest", bgUrl: "https://img.craftpix.net/2022/12/Free-Forest-Battle-Backgrounds2.jpg", boostedType: "Wind", boost: 0.15 },
+    { name: "Ancient Ruins", bgUrl: "https://img.craftpix.net/2019/01/Free-Pixel-Art-Fantasy-2D-Battlegrounds3.jpg", boostedType: "Earth", boost: 0.15 },
+    { name: "Night Forest", bgUrl: "https://img.craftpix.net/2022/12/Free-Forest-Battle-Backgrounds3.jpg", boostedType: "Shadow", boost: 0.15 },
+    { name: "Glacier Plains", bgUrl: "https://img.craftpix.net/2022/12/Free-Forest-Battle-Backgrounds5.jpg", boostedType: "Ice", boost: 0.15 }, // Using a forest image as placeholder
+];
 const COMPLIMENTS = [ "You're an amazing person!", "You're a true inspiration!", "You have a heart of gold.", "You're a ray of sunshine on a cloudy day.", "You're more fun than a barrel of monkeys." ];
 const INSULTS = [ "You're not the sharpest tool in the shed, are you?", "I've had conversations with a wall that were more interesting.", "I've seen more charisma in a wet sock.", "I've seen more intelligent life forms in a petri dish." ];
 const FLIRT_LINES = [ "Are you a magician? Because whenever I look at you, everyone else disappears!", "Do you have a map? I just got lost in your eyes.", "I'm not a photographer, but I can definitely picture us together.", "If you were a vegetable, you'd be a cute-cumber." ];
@@ -96,6 +154,7 @@ let antideleteEnabled = false;
 let autoreactEnabled = false;
 const activeCardSpawns = {};
 const activeCardPacks = {};
+const activeTournaments = {};
 
 async function main() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info_folder');
@@ -267,6 +326,12 @@ async function main() {
 %dungeon - Enter a dungeon.
 %boss - Fight the global boss.
 
+*Tournaments:*
+%tournament create <name> - Create a new tournament.
+%tournament join - Join the active tournament.
+%tournament start - Start the tournament (organizer only).
+%tournament reportwin - Report your win in a tournament match.
+
 *Gifting & Trading:*
 %givedragon <dragon_index> @user - Give a dragon to another player.
 %trade @user <your_dragon_index> <their_dragon_index> - Propose a trade.
@@ -306,6 +371,7 @@ async function main() {
 %huntdragon <Dragon Name> <Level> - Spawn a specific high-level dragon.
 %givegold @user <amount> - Give gold to user (owner only)
 %re-roll <dragon_index> - Re-roll a dragon's moves (owner/mod only).
+%environments - View the list of battle environments.
 
 *Owner:*
 %addsudo @user - Promote a user to mod.
@@ -339,7 +405,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn\n- tournament');
         }
 
         switch (guideName) {
@@ -425,6 +491,140 @@ This command spawns a wild dragon.
                 break;
             default:
                 await reply('Invalid guide name. Use `%guide` to see the list of available guides.');
+            case 'tournament':
+                await reply(
+`*Guide: Tournaments*
+This guide explains how to participate in and run a tournament.
+
+*For Players:*
+- To join an open tournament, use \`%tournament join\`.
+- After you play your match against an opponent, the winner must use \`%tournament reportwin\` to have the result recorded.
+
+*For Organizers (Mods/Owners):*
+1. *Create:* Use \`%tournament create <Tournament Name>\` to start a new tournament and open registration.
+2. *Start:* Once you are ready to begin, use \`%tournament start\`. This closes registration, shuffles the players, and announces the first round of matches.
+3. *Run:* The tournament will run automatically as winners report their victories. The bot will announce new rounds and the final champion.`
+                );
+                break;
+        }
+        break;
+      }
+
+      case 'tournament': {
+        const subCommand = args[0]?.toLowerCase();
+        const tournament = activeTournaments[from];
+
+        switch (subCommand) {
+            case 'create': {
+                if (!hasRole('mod')) return reply('You do not have permission to create a tournament.');
+                if (tournament) return reply(`A tournament named "${tournament.name}" is already active in this group.`);
+
+                const name = args.slice(1).join(' ');
+                if (!name) return reply('Please provide a name for the tournament. Usage: `%tournament create <name>`');
+
+                activeTournaments[from] = {
+                    id: from,
+                    name: name,
+                    status: 'registering',
+                    organizer: { id: sender, name: player.name },
+                    participants: [],
+                    bracket: []
+                };
+
+                await reply(`A new tournament, "${name}", has been created by ${player.name}!\n\nType \`%tournament join\` to enter. Registration is now open!`);
+                break;
+            }
+            case 'join': {
+                if (!tournament) return reply('There is no active tournament to join.');
+                if (tournament.status !== 'registering') return reply('Tournament registration is currently closed.');
+
+                const alreadyJoined = tournament.participants.find(p => p.id === sender);
+                if (alreadyJoined) return reply('You have already joined this tournament.');
+
+                tournament.participants.push({ id: sender, name: player.name });
+                await reply(`${player.name} has joined the "${tournament.name}" tournament!`);
+                break;
+            }
+            case 'start': {
+                if (!tournament) return reply('There is no active tournament.');
+                if (tournament.organizer.id !== sender) return reply('Only the tournament organizer can start the tournament.');
+                if (tournament.status !== 'registering') return reply('The tournament has already started or is finished.');
+                if (tournament.participants.length < 2) return reply('Not enough players have joined to start the tournament.');
+
+                tournament.status = 'running';
+
+                // Shuffle participants
+                const shuffled = tournament.participants.sort(() => 0.5 - Math.random());
+
+                const round1 = [];
+                for (let i = 0; i < shuffled.length; i += 2) {
+                    if (shuffled[i+1]) {
+                        round1.push({ player1: shuffled[i], player2: shuffled[i+1], winner: null });
+                    } else {
+                        // Handle odd number of players - give a bye
+                        round1.push({ player1: shuffled[i], player2: { name: 'BYE' }, winner: shuffled[i].id });
+                    }
+                }
+                tournament.bracket.push(round1);
+
+                let announcement = `*The "${tournament.name}" tournament has begun!* \n\n*Round 1 Matchups:*\n`;
+                round1.forEach((match, i) => {
+                    announcement += `\nMatch ${i+1}: ${match.player1.name} vs ${match.player2.name}`;
+                    if (match.player2.name === 'BYE') announcement += ` (BYE)`;
+                });
+                announcement += `\n\nWinners should report their victory using \`%tournament reportwin\`. Good luck!`;
+
+                await reply(announcement);
+                break;
+            }
+            case 'reportwin': {
+                if (!tournament || tournament.status !== 'running') return reply('There is no tournament currently running.');
+
+                const currentRound = tournament.bracket[tournament.bracket.length - 1];
+                const playerMatch = currentRound.find(m => (m.player1.id === sender || m.player2.id === sender) && !m.winner);
+
+                if (!playerMatch) return reply('You are not in an active tournament match or your match result has already been recorded.');
+
+                playerMatch.winner = sender;
+                await reply(`${player.name} has reported their win! The result has been recorded.`);
+
+                // Check if the round is over
+                const allMatchesFinished = currentRound.every(m => m.winner);
+                if (allMatchesFinished) {
+                    const winners = currentRound.map(m => {
+                        const winnerId = m.winner;
+                        return tournament.participants.find(p => p.id === winnerId);
+                    }).filter(Boolean); // Filter out any potential nulls
+
+                    if (winners.length === 1) {
+                        // We have a champion!
+                        tournament.status = 'finished';
+                        await reply(`*The tournament "${tournament.name}" has concluded!* \n\nCongratulations to the champion, *${winners[0].name}*!`);
+                        delete activeTournaments[from]; // Clean up
+                    } else {
+                        // Start the next round
+                        const nextRound = [];
+                        for (let i = 0; i < winners.length; i += 2) {
+                            if (winners[i+1]) {
+                                nextRound.push({ player1: winners[i], player2: winners[i+1], winner: null });
+                            } else {
+                                nextRound.push({ player1: winners[i], player2: { name: 'BYE' }, winner: winners[i].id });
+                            }
+                        }
+                        tournament.bracket.push(nextRound);
+
+                        let announcement = `*All matches for Round ${tournament.bracket.length - 1} are complete!* \n\n*Round ${tournament.bracket.length} Matchups:*\n`;
+                        nextRound.forEach((match, i) => {
+                            announcement += `\nMatch ${i+1}: ${match.player1.name} vs ${match.player2.name}`;
+                             if (match.player2.name === 'BYE') announcement += ` (BYE)`;
+                        });
+                        await reply(announcement);
+                    }
+                }
+                break;
+            }
+            default:
+                await reply('Invalid tournament command. Use `%tournament <create|join|start|reportwin>`');
         }
         break;
       }
@@ -444,15 +644,34 @@ This command spawns a wild dragon.
         break;
       }
 
+      case 'environments': {
+        if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+
+        let response = '*Available Battle Environments:*\n\n';
+        BATTLE_ENVIRONMENTS.forEach(env => {
+            response += `- *${env.name}* (Boosts: ${env.boostedType})\n`;
+        });
+
+        await reply(response);
+        break;
+      }
+
       case 'huntdragon': {
         if (!hasRole('mod')) return reply('You do not have permission to use this command.');
         if (activeWildEncounters[from]) return reply('A wild dragon has already spawned in this chat. Use %catch or defeat it first.');
+
+        // --env <name> can be anywhere
+        let envName = null;
+        const envIndex = args.findIndex(arg => arg.toLowerCase() === '--env');
+        if (envIndex > -1) {
+            envName = args.splice(envIndex, 2)[1];
+        }
 
         const dragonName = args.slice(0, -1).join(' ');
         const level = parseInt(args[args.length - 1]);
 
         if (!dragonName || isNaN(level) || level <= 0) {
-            return reply('Invalid usage. Use `%huntdragon <Dragon Name> <Level>`.');
+            return reply('Invalid usage. Use `%huntdragon <Dragon Name> <Level> [--env <Environment Name>]`.');
         }
 
         const dragonData = dragons.find(d => d.name.toLowerCase() === dragonName.toLowerCase());
@@ -467,9 +686,23 @@ This command spawns a wild dragon.
         const totalDamage = wildDragon.moves.reduce((sum, move) => sum + move.damage, 0);
         wildDragon.hp = Math.floor((totalDamage * 5) * (1 + level / 10)); // HP scales with level
 
-        activeWildEncounters[from] = { ...wildDragon, captured: false };
+        let environment;
+        if (envName) {
+            environment = BATTLE_ENVIRONMENTS.find(e => e.name.toLowerCase() === envName.toLowerCase());
+            if (!environment) {
+                return reply(`Invalid environment name. Use %environments to see the list.`);
+            }
+        } else {
+            environment = BATTLE_ENVIRONMENTS[Math.floor(Math.random() * BATTLE_ENVIRONMENTS.length)];
+        }
 
-        await reply(`A powerful wild ${wildDragon.name} (Level ${wildDragon.level}, HP: ${wildDragon.hp}) has been summoned! Use %attack to battle it.`);
+        activeWildEncounters[from] = {
+            dragon: wildDragon,
+            captured: false,
+            environment: environment
+        };
+
+        await reply(`A powerful wild ${wildDragon.name} (Level ${wildDragon.level}, HP: ${wildDragon.hp}) has been summoned in the ${environment.name}! Use %attack to battle it.`);
         break;
       }
 
@@ -1143,12 +1376,26 @@ This command spawns a wild dragon.
         const totalPlayerDamage = playerDragon.moves.reduce((sum, move) => sum + move.damage, 0);
         playerDragon.hp = Math.floor((totalPlayerDamage * 5) * (1 + playerDragon.level / 10));
 
+        const environment = BATTLE_ENVIRONMENTS[Math.floor(Math.random() * BATTLE_ENVIRONMENTS.length)];
         activeBattles[from] = {
             player,
             playerDragon,
             opponentDragon: wildDragon,
-            turn: 'player'
+            turn: 'player',
+            environment: environment
         };
+
+        const battleImageUrl = await generateBattleImage(playerDragon, wildDragon, environment);
+        if (battleImageUrl) {
+            try {
+                const imageResponse = await axios.get(battleImageUrl, { responseType: 'arraybuffer' });
+                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+                await sock.sendMessage(from, { image: imageBuffer, caption: `*A battle begins in the ${environment.name}!*` }, { quoted: msg });
+            } catch (imgError) {
+                console.error("Failed to send generated battle image:", imgError);
+                await reply(`*A battle begins in the ${environment.name}!* (Image generation failed)`);
+            }
+        }
 
         let battleGuide = `*You have engaged the wild ${wildDragon.name}!*\n\n`;
         battleGuide += `*Your ${playerDragon.name}* (HP: ${playerDragon.hp})\n`;
@@ -1845,11 +2092,25 @@ This command spawns a wild dragon.
             const totalOpponentDamage = opponentDragon.moves.reduce((sum, move) => sum + move.damage, 0);
             opponentDragon.hp = Math.floor((totalOpponentDamage * 5) * (1 + opponentDragon.level / 10));
 
+            const environment = BATTLE_ENVIRONMENTS[Math.floor(Math.random() * BATTLE_ENVIRONMENTS.length)];
             activeBattles[from] = {
                 player1: { id: sender, player: player, dragon: playerDragon },
                 player2: { id: opponentId, player: opponent, dragon: opponentDragon },
-                turn: 'player1'
+                turn: 'player1',
+                environment: environment
             };
+
+            const battleImageUrl = await generateBattleImage(playerDragon, opponentDragon, environment);
+            if (battleImageUrl) {
+                try {
+                    const imageResponse = await axios.get(battleImageUrl, { responseType: 'arraybuffer' });
+                    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+                    await sock.sendMessage(from, { image: imageBuffer, caption: `*A battle begins in the ${environment.name}!*` }, { quoted: msg });
+                } catch (imgError) {
+                    console.error("Failed to send generated battle image:", imgError);
+                    await reply(`*A battle begins in the ${environment.name}!* (Image generation failed)`);
+                }
+            }
 
             let battleGuide = `*A battle has started between ${player.name} and ${opponent.name}!*\n\n`;
             battleGuide += `*${player.name}'s ${playerDragon.name}* (HP: ${playerDragon.hp})\n`;
@@ -1881,10 +2142,19 @@ This command spawns a wild dragon.
 
                 const move = battle[currentPlayerKey].dragon.moves[moveIndex];
                 const effectiveness = getEffectiveness(move.type, battle[opponentPlayerKey].dragon.type);
-                const damage = Math.floor(move.damage * effectiveness);
+                let damage = Math.floor(move.damage * effectiveness);
+
+                let battleReport = `${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} used ${move.name}!\n`;
+
+                // Check for environmental boost
+                if (battle.environment && battle.environment.boostedType === battle[currentPlayerKey].dragon.type) {
+                    damage = Math.floor(damage * (1 + battle.environment.boost));
+                    battleReport += `The ${battle.environment.name} strengthens the attack!\n`;
+                }
+
                 battle[opponentPlayerKey].dragon.hp -= damage;
 
-                let battleReport = `${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} used ${move.name} and dealt ${damage} damage!\n`;
+                battleReport += `It dealt ${damage} damage!\n`;
                 if (effectiveness > 1) battleReport += "It's super effective!\n";
                 if (effectiveness < 1) battleReport += "It's not very effective...\n";
                 battleReport += `${battle[opponentPlayerKey].player.name}'s ${battle[opponentPlayerKey].dragon.name} has ${battle[opponentPlayerKey].dragon.hp > 0 ? battle[opponentPlayerKey].dragon.hp : 0} HP remaining.\n\n`;
