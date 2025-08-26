@@ -33,6 +33,7 @@ const CARD_CLAIM_COST = 100;
 const CARD_PACK_COST = 300;
 const CARD_PACK_SIZE = 3;
 const GUILD_CREATE_COST = 10000;
+const UNSPLASH_ACCESS_KEY = 'YRq1pHreWswtEjw1_iMs0XjuRfJzM1dSj4Kk6FOSmPk';
 const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
 const rolesHierarchy = ['user', 'mod', 'owner'];
@@ -76,6 +77,22 @@ function getEffectiveness(moveType, targetDragonType) {
 function getRank(level) {
     const rankIndex = Math.floor((level - 1) / 10);
     return RANKS[rankIndex] || RANKS[RANKS.length - 1];
+}
+
+async function findDragonImage(query) {
+    try {
+        const response = await axios.get('https://api.unsplash.com/search/photos', {
+            params: { query: `${query} dragon fantasy art`, per_page: 1 },
+            headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
+        });
+        if (response.data.results.length > 0) {
+            return response.data.results[0].urls.regular;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching from Unsplash:", error.response?.data || error.message);
+        return null;
+    }
 }
 
 async function generateBattleImage(playerDragon, opponentDragon, environment) {
@@ -534,6 +551,29 @@ This guide explains how to create, join, and manage a guild.
 - Masters and Officers can use \`%guild manage kick @user\` to remove members.`
                 );
                 break;
+        }
+        break;
+      }
+
+      case 'findimage': {
+        if (!hasRole('owner')) return reply('This is a debug command.');
+        const query = args.join(' ');
+        if (!query) return reply('Please provide a search query.');
+
+        try {
+            const response = await axios.get('https://api.unsplash.com/search/photos', {
+                params: { query: `${query} dragon fantasy art`, per_page: 1 },
+                headers: { Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}` }
+            });
+
+            if (response.data.results.length > 0) {
+                await reply(response.data.results[0].urls.regular);
+            } else {
+                await reply('No image found for that query.');
+            }
+        } catch (error) {
+            console.error(error);
+            await reply('Error fetching image from Unsplash.');
         }
         break;
       }
@@ -2096,17 +2136,24 @@ This guide explains how to create, join, and manage a guild.
       }
 
       case 'mods': {
-        const allPlayers = Object.values(getAllPlayers());
-        const mods = allPlayers.filter(p => p.roles.includes('mod') || p.roles.includes('owner'));
+        const missingImageDragons = [
+            "Horrorcow", "Windwalker", "Wodensfang", "Three-headed dragon", "Armorwing", "Moldruffle",
+            "Graveknapper", "Ripwrecker", "Silver Phantom", "Wraithmill", "Frostcrusher",
+            "Thornridge", "Frostfang", "Smokebreath Queen", "Nightlight dragons", "Titan wing dragon", "Red Furry"
+        ];
 
-        if (mods.length === 0) {
-            return reply('There are no mods or owners.');
+        let imageUrls = {};
+
+        for (const dragonName of missingImageDragons) {
+            const url = await findDragonImage(dragonName);
+            imageUrls[dragonName] = url;
+            await new Promise(resolve => setTimeout(resolve, 1100)); // Avoid rate limiting
         }
 
-        let response = '*Bot Moderators & Owners:*\n\n';
-        mods.forEach(mod => {
-            response += `- ${mod.name}\n`;
-        });
+        let response = "Found Image URLs:\n\n";
+        for (const name in imageUrls) {
+            response += `${name}: ${imageUrls[name]}\n`;
+        }
 
         await reply(response);
         break;

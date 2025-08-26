@@ -2433,7 +2433,7 @@ const dragons = [
     "id": 82,
     "name": "Horrorcow",
     "type": "Earth",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1718202384239-8de0147482c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxIb3Jyb3Jjb3clMjBkcmFnb24lMjBmYW50YXN5JTIwYXJ0fGVufDB8fHx8MTc1NjIyNTI4OXww&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Ground Tremor",
@@ -2463,7 +2463,7 @@ const dragons = [
     "id": 83,
     "name": "Windwalker",
     "type": "Wind",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1667477603004-00852d582d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxXaW5kd2Fsa2VyJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUyOTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Feather Lift",
@@ -2493,7 +2493,7 @@ const dragons = [
     "id": 84,
     "name": "Wodensfang",
     "type": "Water",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1648224012486-288f9ffe630a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxXb2RlbnNmYW5nJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUyOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Ocean Roar",
@@ -2523,7 +2523,7 @@ const dragons = [
     "id": 85,
     "name": "Patience / Innocence / Arrogance",
     "type": "Shadow",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1648224012486-288f9ffe630a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxQYXRpZW5jZSUyMCUyRiUyMElubm9jZW5jZSUyMCUyRiUyMEFycm9nYW5jZSUyMGRyYWdvbiUyMGZhbnRhc3klMjBhcnR8ZW58MHx8fHwxNzU2MjI1MjkzfDA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Phantom Claw",
@@ -2553,7 +2553,7 @@ const dragons = [
     "id": 86,
     "name": "Armorwing",
     "type": "Steel",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1667477603004-00852d582d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxBcm1vcndpbmclMjBkcmFnb24lMjBmYW50YXN5JTIwYXJ0fGVufDB8fHx8MTc1NjIyNTI5NXww&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Tail Plate Smash",
@@ -2583,7 +2583,7 @@ const dragons = [
     "id": 87,
     "name": "Moldruffle",
     "type": "Poison",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1610926597998-fc7f2c1b89b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxNb2xkcnVmZmxlJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUyOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Earth Heal",
@@ -2613,7 +2613,7 @@ const dragons = [
     "id": 88,
     "name": "Graveknapper",
     "type": "Bone",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1667477603004-00852d582d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxHcmF2ZWtuYXBwZXIlMjBkcmFnb24lMjBmYW50YXN5JTIwYXJ0fGVufDB8fHx8MTc1NjIyNTI5OHww&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Venom Drip",
@@ -2643,7 +2643,7 @@ const dragons = [
     "id": 89,
     "name": "Ripwrecker",
     "type": "Water",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1667477603004-00852d582d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxSaXB3cmVja2VyJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUyOTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Stomp",
@@ -2673,7 +2673,7 @@ const dragons = [
     "id": 90,
     "name": "Silver Phantom",
     "type": "Shadow",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1672457670745-890db331d8ed?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxTaWx2ZXIlMjBQaGFudG9tJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUzMDF8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Phantom Glide",
@@ -2703,7 +2703,7 @@ const dragons = [
     "id": 91,
     "name": "Wraithmill",
     "type": "Shadow",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1718202384239-8de0147482c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxXcmFpdGhtaWxsJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUzMDN8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Quick Bite",
@@ -2733,7 +2733,7 @@ const dragons = [
     "id": 92,
     "name": "Frostcrusher",
     "type": "Ice",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1648757713998-ba065a78cf18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxGcm9zdGNydXNoZXIlMjBkcmFnb24lMjBmYW50YXN5JTIwYXJ0fGVufDB8fHx8MTc1NjIyNTMwNHww&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Frozen Stomp",
@@ -2763,7 +2763,7 @@ const dragons = [
     "id": 93,
     "name": "Thornridge",
     "type": "Poison",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1667477603004-00852d582d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxUaG9ybnJpZGdlJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUzMDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Quick Bite",
@@ -2793,7 +2793,7 @@ const dragons = [
     "id": 94,
     "name": "Frostfang",
     "type": "Ice",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1648224012486-288f9ffe630a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxGcm9zdGZhbmclMjBkcmFnb24lMjBmYW50YXN5JTIwYXJ0fGVufDB8fHx8MTc1NjIyNTMwN3ww&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Quick Bite",
@@ -2823,7 +2823,7 @@ const dragons = [
     "id": 95,
     "name": "Smokebreath Queen",
     "type": "Fire",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1635277653662-e00aced51a43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxTbW9rZWJyZWF0aCUyMFF1ZWVuJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUzMDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Fire Trail",
@@ -2853,7 +2853,7 @@ const dragons = [
     "id": 96,
     "name": "Nightlight Hybrids (Dart, Pouncer, Ruffrunner)",
     "type": "Shadow",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1543111576-b87dc343c1f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxOaWdodGxpZ2h0JTIwSHlicmlkcyUyMGRyYWdvbiUyMGZhbnRhc3klMjBhcnR8ZW58MHx8fHwxNzU2MjI1MzEwfDA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Eclipse Pulse",
@@ -2883,7 +2883,7 @@ const dragons = [
     "id": 97,
     "name": "Titan Variants",
     "type": "Varies",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1728246950257-e265c83c0e26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxUaXRhbiUyMFZhcmlhbnRzJTIwZHJhZ29uJTIwZmFudGFzeSUyMGFydHxlbnwwfHx8fDE3NTYyMjUzMTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Quick Bite",
@@ -2913,7 +2913,7 @@ const dragons = [
     "id": 98,
     "name": "Red Furry",
     "type": "Fire",
-    "imageUrl": "Image not available",
+    "imageUrl": "https://images.unsplash.com/photo-1718202384239-8de0147482c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3OTY5NTB8MHwxfHNlYXJjaHwxfHxSZWQlMjBGdXJyeSUyMGRyYWdvbiUyMGZhbnRhc3klMjBhcnR8ZW58MHx8fHwxNzU2MjI1MzEzfDA&ixlib=rb-4.1.0&q=80&w=1080",
     "moves": [
       {
         "name": "Flame Breath",
