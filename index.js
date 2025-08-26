@@ -16,6 +16,7 @@ const ytdlp = require('ytdlp-nodejs');
 const shop = require('./shop.js');
 const cards = require('./cardData.js');
 const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
+const { createGuild, getGuild, getAllGuilds, updateGuild } = require('./guildData.js');
 const cloudinary = require('cloudinary').v2;
 
 // Cloudinary Configuration
@@ -31,6 +32,7 @@ const GIPHY_API_KEY = 'Pkfeqgcgi4LsgiR677BoTBWKN2utJrAl';
 const CARD_CLAIM_COST = 100;
 const CARD_PACK_COST = 300;
 const CARD_PACK_SIZE = 3;
+const GUILD_CREATE_COST = 10000;
 const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
 const rolesHierarchy = ['user', 'mod', 'owner'];
@@ -332,6 +334,14 @@ async function main() {
 %tournament start - Start the tournament (organizer only).
 %tournament reportwin - Report your win in a tournament match.
 
+*Guilds:*
+%guilds - List all guilds.
+%guild create <name> - Create a new guild (costs 10000 gold).
+%guild join <name> - Request to join a guild.
+%guild info [name] - View info about your guild or another.
+%guild accept @user - Accept a user's request to join (Master only).
+%guild manage <promote|kick> @user - Promote or kick a member (Master/Officer only).
+
 *Gifting & Trading:*
 %givedragon <dragon_index> @user - Give a dragon to another player.
 %trade @user <your_dragon_index> <their_dragon_index> - Propose a trade.
@@ -405,7 +415,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn\n- tournament');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn\n- tournament\n- guild');
         }
 
         switch (guideName) {
@@ -506,6 +516,176 @@ This guide explains how to participate in and run a tournament.
 3. *Run:* The tournament will run automatically as winners report their victories. The bot will announce new rounds and the final champion.`
                 );
                 break;
+            case 'guild':
+                await reply(
+`*Guide: Guilds*
+This guide explains how to create, join, and manage a guild.
+
+*Finding & Joining:*
+- Use \`%guilds\` to see a list of all guilds.
+- Use \`%guild join <Guild Name>\` to request to join a guild. Your request must be accepted by the Guild Master.
+- Use \`%guild info [Guild Name]\` to see details about your guild or another guild.
+
+*Creating & Managing:*
+- Use \`%guild create <Guild Name>\` to found a new guild. This costs 10,000 gold.
+- The creator becomes the Guild Master.
+- The Guild Master can use \`%guild accept @user\` to accept members.
+- The Guild Master can use \`%guild manage promote @user\` to promote a member to Officer.
+- Masters and Officers can use \`%guild manage kick @user\` to remove members.`
+                );
+                break;
+        }
+        break;
+      }
+
+      case 'guild': {
+        const subCommand = args[0]?.toLowerCase();
+
+        switch (subCommand) {
+            case 'create': {
+                if (player.guildId) return reply('You are already in a guild.');
+                if (player.gold < GUILD_CREATE_COST) return reply(`You need ${GUILD_CREATE_COST} gold to create a guild. You only have ${player.gold}.`);
+
+                const name = args.slice(1).join(' ');
+                if (!name) return reply('Please provide a name for your guild. Usage: `%guild create <name>`');
+
+                const newGuild = createGuild(name, player);
+                if (!newGuild) {
+                    return reply(`A guild with the name "${name}" already exists.`);
+                }
+
+                player.gold -= GUILD_CREATE_COST;
+                player.guildId = newGuild.id;
+                savePlayer();
+
+                await reply(`Congratulations! You have founded the guild "${name}"!`);
+                break;
+            }
+            case 'join': {
+                if (player.guildId) return reply('You are already in a guild. Use `%guild leave` first.');
+
+                const guildName = args.slice(1).join(' ');
+                if (!guildName) return reply('Please specify the name of the guild you want to join.');
+
+                const allGuilds = getAllGuilds();
+                const targetGuild = Object.values(allGuilds).find(g => g.name.toLowerCase() === guildName.toLowerCase());
+
+                if (!targetGuild) return reply(`The guild "${guildName}" does not exist.`);
+
+                if (targetGuild.joinRequests.some(req => req.id === sender)) {
+                    return reply('You have already sent a join request to this guild.');
+                }
+
+                targetGuild.joinRequests.push({ id: sender, name: player.name });
+                updateGuild(targetGuild);
+
+                await reply(`Your request to join "${targetGuild.name}" has been sent.`);
+                // For now, we just notify in the chat. A more advanced system would DM the guild master.
+                const guildMaster = getPlayer(targetGuild.master);
+                if (guildMaster) {
+                    await reply(`@${targetGuild.master.split('@')[0]}, ${player.name} has requested to join your guild. Use \`%guild accept @${sender.split('@')[0]}\` to accept.`);
+                }
+                break;
+            }
+            case 'accept': {
+                if (!player.guildId) return reply('You are not in a guild.');
+
+                const myGuild = getGuild(player.guildId);
+                if (!myGuild || myGuild.master !== sender) return reply('Only the Guild Master can accept new members.');
+
+                const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+                if (!targetId) return reply('You need to mention a user to accept.');
+
+                const requestIndex = myGuild.joinRequests.findIndex(req => req.id === targetId);
+                if (requestIndex === -1) return reply('This user has not requested to join your guild.');
+
+                const [acceptedPlayerInfo] = myGuild.joinRequests.splice(requestIndex, 1);
+                myGuild.members.push(acceptedPlayerInfo.id);
+                updateGuild(myGuild);
+
+                const targetPlayer = getPlayer(targetId);
+                targetPlayer.guildId = myGuild.id;
+                updatePlayer(targetPlayer);
+
+                await reply(`${acceptedPlayerInfo.name} has been accepted into "${myGuild.name}"!`);
+                break;
+            }
+            case 'manage': {
+                if (!player.guildId) return reply('You are not in a guild.');
+
+                const myGuild = getGuild(player.guildId);
+                const action = args[1]?.toLowerCase();
+                const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+
+                if (!action || !targetId) {
+                    return reply('Usage: `%guild manage <promote|kick> @user`');
+                }
+
+                switch (action) {
+                    case 'promote':
+                        if (myGuild.master !== sender) return reply('Only the Guild Master can promote members.');
+                        if (!myGuild.members.includes(targetId)) return reply('That player is not in your guild.');
+                        if (myGuild.officers.includes(targetId)) return reply('That player is already an officer.');
+
+                        myGuild.officers.push(targetId);
+                        updateGuild(myGuild);
+                        await reply(`Promoted @${targetId.split('@')[0]} to Officer.`);
+                        break;
+
+                    case 'kick':
+                        const isMaster = myGuild.master === sender;
+                        const isOfficer = myGuild.officers.includes(sender);
+                        if (!isMaster && !isOfficer) return reply('Only the Guild Master or Officers can kick members.');
+
+                        if (!myGuild.members.includes(targetId)) return reply('That player is not in your guild.');
+                        if (targetId === myGuild.master) return reply('You cannot kick the Guild Master.');
+                        if (myGuild.officers.includes(targetId) && !isMaster) return reply('Only the Guild Master can kick an Officer.');
+
+                        myGuild.members = myGuild.members.filter(id => id !== targetId);
+                        myGuild.officers = myGuild.officers.filter(id => id !== targetId);
+                        updateGuild(myGuild);
+
+                        const kickedPlayer = getPlayer(targetId);
+                        kickedPlayer.guildId = null;
+                        updatePlayer(kickedPlayer);
+
+                        await reply(`Kicked @${targetId.split('@')[0]} from the guild.`);
+                        break;
+
+                    default:
+                        await reply('Invalid management command. Use `promote` or `kick`.');
+                }
+                break;
+            }
+            case 'info': {
+                let targetGuild;
+                const guildName = args.slice(1).join(' ');
+
+                if (guildName) {
+                    const allGuilds = getAllGuilds();
+                    targetGuild = Object.values(allGuilds).find(g => g.name.toLowerCase() === guildName.toLowerCase());
+                    if (!targetGuild) return reply(`The guild "${guildName}" does not exist.`);
+                } else {
+                    if (!player.guildId) return reply('You are not in a guild. Specify a guild name to view its info.');
+                    targetGuild = getGuild(player.guildId);
+                }
+
+                if (!targetGuild) return reply('Could not find the specified guild.');
+
+                const masterName = getPlayer(targetGuild.master)?.name || 'Unknown';
+                const memberNames = targetGuild.members.map(id => getPlayer(id)?.name || 'Unknown');
+
+                let response = `*Guild Info: ${targetGuild.name}*\n\n`;
+                response += `*Master:* ${masterName}\n`;
+                response += `*Officers:* ${targetGuild.officers.length}\n`;
+                response += `*Total Members:* ${targetGuild.members.length}\n\n`;
+                response += `*Members:*\n- ${memberNames.join('\n- ')}`;
+
+                await reply(response);
+                break;
+            }
+            default:
+                await reply('Invalid guild command. Use `%guild <create|join|accept|manage|info|...>`');
         }
         break;
       }
@@ -2321,6 +2501,21 @@ This guide explains how to participate in and run a tournament.
             default:
                 await reply('Invalid battle command. Use `%battle fight`, `%battle switch`, `%battle catch`, `%battle run`, or `%battle forfeit`.');
         }
+        break;
+      }
+
+      case 'guilds': {
+        const allGuilds = Object.values(getAllGuilds());
+        if (allGuilds.length === 0) {
+            return reply('There are no guilds yet. Create one with `%guild create <name>`!');
+        }
+
+        let response = '*List of Guilds:*\n\n';
+        allGuilds.forEach(g => {
+            response += `- *${g.name}* (Members: ${g.members.length})\n`;
+        });
+
+        await reply(response);
         break;
       }
 
