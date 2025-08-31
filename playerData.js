@@ -34,12 +34,17 @@ function getPlayer(id, name) {
       roles: [],
       banned: false,
       dailyQuest: null,
-      guildId: null
+      guildId: null,
+      titles: []
     };
     savePlayers(players);
   } else {
     // Data migration for existing players
     let needsSave = false;
+    if (players[id].titles === undefined) {
+        players[id].titles = [];
+        needsSave = true;
+    }
     if (players[id].guildId === undefined) {
         players[id].guildId = null;
         needsSave = true;

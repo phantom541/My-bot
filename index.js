@@ -17,6 +17,9 @@ const shop = require('./shop.js');
 const cards = require('./cardData.js');
 const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
 const { createGuild, getGuild, getAllGuilds, updateGuild } = require('./guildData.js');
+const dungeons = require('./dungeonData.js');
+const monsters = require('./monsterData.js');
+const beasts = require('./beastData.js');
 const cloudinary = require('cloudinary').v2;
 
 // Cloudinary Configuration
@@ -92,6 +95,73 @@ async function findDragonImage(query) {
     } catch (error) {
         console.error("Error fetching from Unsplash:", error.response?.data || error.message);
         return null;
+    }
+}
+
+async function handleDungeonProgression(from, sock) {
+    const dungeon = activeDungeons[from];
+    if (!dungeon) return;
+
+    // A monster was just defeated. Let's see what's next.
+    dungeon.monstersDefeated = (dungeon.monstersDefeated || 0) + 1;
+    const currentFloor = `floor${dungeon.floor}`;
+    const monstersOnFloor = dungeon.monsters[currentFloor].length;
+
+    if (dungeon.monstersDefeated < monstersOnFloor) {
+        // More monsters on this floor
+        const nextMonsterId = dungeon.monsters[currentFloor][dungeon.monstersDefeated];
+        const monster = monsters.find(m => m.id === nextMonsterId);
+
+        // Cycle through the party
+        const nextPlayerIndex = dungeon.monstersDefeated % dungeon.party.length;
+        const playerToFight = dungeon.party[nextPlayerIndex];
+
+        activeBattles[from] = {
+            player: playerToFight,
+            playerDragon: { level: 5, xp: 0, ...playerToFight.party[0] },
+            opponentDragon: monster,
+            turn: 'player',
+            environment: dungeon.environment,
+            isDungeonBattle: true
+        };
+
+        await sock.sendMessage(from, { text: `${playerToFight.name} steps up to face the next challenge: a ${monster.name}!` });
+
+    } else {
+        // Floor cleared!
+        if (dungeon.floor < dungeon.floors) {
+            dungeon.floor++;
+            dungeon.monstersDefeated = 0;
+            const nextFloor = `floor${dungeon.floor}`;
+            const nextMonsterId = dungeon.monsters[nextFloor][0];
+            const monster = monsters.find(m => m.id === nextMonsterId);
+            const playerToFight = dungeon.party[0]; // First player starts the new floor
+
+            activeBattles[from] = {
+                player: playerToFight,
+                playerDragon: { level: 5, xp: 0, ...playerToFight.party[0] },
+                opponentDragon: monster,
+                turn: 'player',
+                environment: dungeon.environment,
+                isDungeonBattle: true
+            };
+
+            await sock.sendMessage(from, { text: `Floor ${dungeon.floor - 1} cleared! The party descends to Floor ${dungeon.floor}.\n\n${playerToFight.name} encounters a ${monster.name}!` });
+
+        } else {
+            // Dungeon complete!
+            await sock.sendMessage(from, { text: `Congratulations! Your party has cleared the ${dungeon.name}!` });
+
+            dungeon.party.forEach(p => {
+                const player = getPlayer(p.id);
+                player.gold += dungeon.rewards.gold;
+                player.playerXp += dungeon.rewards.xp;
+                updatePlayer(player);
+                sock.sendMessage(from, { text: `${player.name} receives ${dungeon.rewards.gold} gold and ${dungeon.rewards.xp} XP!` });
+            });
+
+            delete activeDungeons[from];
+        }
     }
 }
 
@@ -174,6 +244,8 @@ let autoreactEnabled = false;
 const activeCardSpawns = {};
 const activeCardPacks = {};
 const activeTournaments = {};
+const activeDungeons = {};
+const activeBeast = {};
 
 async function main() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info_folder');
@@ -345,6 +417,17 @@ async function main() {
 %dungeon - Enter a dungeon.
 %boss - Fight the global boss.
 
+*Dungeons:*
+%dungeons - View available dungeons.
+%spawn-dungeon <name> - Spawn a dungeon (Admin only).
+%enter-dungeon - Enter the active dungeon.
+%dungeon start - Start the dungeon crawl (Party leader only).
+
+*Colossal Beasts:*
+%beasts - List the Colossal Beasts.
+%activate-scenario <name> - Spawn a Colossal Beast (Admin only).
+%challenge-beast - Fight the active Colossal Beast.
+
 *Tournaments:*
 %tournament create <name> - Create a new tournament.
 %tournament join - Join the active tournament.
@@ -432,7 +515,7 @@ Owner: ${OWNER_NAME}
       case 'guide': {
         const guideName = args[0]?.toLowerCase();
         if (!guideName) {
-            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn\n- tournament\n- guild');
+            return reply('*Available Guides:*\n- start-hunt\n- battle\n- trade\n- remove\n- cards\n- givecard\n- modes\n- spawn\n- tournament\n- guild\n- dungeons\n- beasts');
         }
 
         switch (guideName) {
@@ -549,6 +632,32 @@ This guide explains how to create, join, and manage a guild.
 - The Guild Master can use \`%guild accept @user\` to accept members.
 - The Guild Master can use \`%guild manage promote @user\` to promote a member to Officer.
 - Masters and Officers can use \`%guild manage kick @user\` to remove members.`
+                );
+                break;
+            case 'dungeons':
+                await reply(
+`*Guide: Dungeons*
+Dungeons are challenging, multi-floor battles for guild members.
+
+*How it Works:*
+1. An admin must first spawn a dungeon with \`%spawn-dungeon <Dungeon Name>\`.
+2. Once spawned, all members of a guild can form a party by using \`%enter-dungeon\`.
+3. The first player to enter is the party leader and can start the crawl with \`%dungeon start\`.
+4. The party will then fight through multiple floors of monsters.
+5. If the party clears the final floor, everyone in the party receives a reward!`
+                );
+                break;
+            case 'beasts':
+                await reply(
+`*Guide: Colossal Beasts*
+These are world bosses that can be spawned by an admin.
+
+*How it Works:*
+1. An admin uses \`%activate-scenario <Beast Name>\` to summon a beast.
+2. The beast's arrival is announced globally. It will only remain for 15 minutes.
+3. Any player can fight it using \`%challenge-beast\`.
+4. These are extremely difficult 1-on-1 battles.
+5. The first player to defeat the beast tames it permanently and receives a massive reward!`
                 );
                 break;
         }
@@ -872,6 +981,46 @@ This guide explains how to create, join, and manage a guild.
             response += `- *${env.name}* (Boosts: ${env.boostedType})\n`;
         });
 
+        await reply(response);
+        break;
+      }
+
+      case 'activate-scenario': {
+        if (!hasRole('owner')) return reply('You do not have permission to use this command.');
+        if (activeBeast[from]) return reply('A Colossal Beast is already active.');
+
+        const beastName = args.join(' ');
+        const beast = beasts.find(b => b.name.toLowerCase() === beastName.toLowerCase());
+
+        if (!beast) return reply('That Colossal Beast does not exist. Use `%beasts` to see the list.');
+
+        activeBeast[from] = { ...beast };
+
+        try {
+            const imageResponse = await axios.get(beast.imageUrl, { responseType: 'arraybuffer' });
+            const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+            let caption = `A legendary terror appears!\n\n*${beast.name}*\n\nIt can be challenged with \`%challenge-beast\`. It will vanish in 15 minutes.`;
+            await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
+        } catch (error) {
+            console.error("Error sending beast image:", error);
+            await reply(`A legendary terror appears! *${beast.name}* (Image failed to load)`);
+        }
+
+        setTimeout(() => {
+            if (activeBeast[from] && activeBeast[from].name === beast.name) {
+                delete activeBeast[from];
+                sock.sendMessage(from, { text: `The Colossal Beast, ${beast.name}, has vanished.` });
+            }
+        }, 15 * 60 * 1000);
+
+        break;
+      }
+
+      case 'beasts': {
+        let response = '*The Seven Colossal Beasts of Ruin:*\n\n';
+        beasts.forEach(b => {
+            response += `- *${b.name}*\n`;
+        });
         await reply(response);
         break;
       }
@@ -2387,6 +2536,35 @@ This guide explains how to create, join, and manage a guild.
                 battleReport += `${battle[opponentPlayerKey].player.name}'s ${battle[opponentPlayerKey].dragon.name} has ${battle[opponentPlayerKey].dragon.hp > 0 ? battle[opponentPlayerKey].dragon.hp : 0} HP remaining.\n\n`;
 
                 if (battle[opponentPlayerKey].dragon.hp <= 0) {
+                    if (battle.isDungeonBattle) {
+                        await reply(`You defeated the ${battle.opponentDragon.name}!`);
+                        delete activeBattles[from];
+                        await handleDungeonProgression(from, sock);
+                        return;
+                    }
+
+                    if (battle.isBeastBattle) {
+                        const beast = battle.opponentDragon;
+                        const winner = battle.player;
+
+                        winner.gold += 1000000;
+                        winner.titles.push(`${beast.name} Slayer`);
+
+                        const tamedBeast = { ...beast, id: `beast_${beast.id}` }; // Ensure unique ID
+                        if (winner.party.length < 6) {
+                            winner.party.push(tamedBeast);
+                        } else {
+                            winner.den.push(tamedBeast);
+                        }
+
+                        updatePlayer(winner);
+                        delete activeBattles[from];
+                        delete activeBeast[from];
+
+                        await reply(`*Incredible! ${winner.name} has defeated and tamed ${beast.name}!* \n\nThey have been awarded 1,000,000 gold and the title "${beast.name} Slayer"!`);
+                        return;
+                    }
+
                     battleReport += `*${battle[currentPlayerKey].player.name}'s ${battle[currentPlayerKey].dragon.name} wins!*`;
 
                     const winner = battle[currentPlayerKey].player;
@@ -2436,6 +2614,14 @@ This guide explains how to create, join, and manage a guild.
                 battle.turn = opponentPlayerKey;
 
                 battleReport += `It's ${battle[opponentPlayerKey].player.name}'s turn! Use \`%battle fight <1-4>\` to attack.`;
+
+                // Handle Beast Passive after player's turn
+                if (battle.isBeastBattle && battle.opponentDragon.passive === 'Dark Aura') {
+                    const drain = Math.floor(battle.playerDragon.hp * 0.05);
+                    battle.playerDragon.hp -= drain;
+                    battleReport += `\n\nLycagon's Dark Aura drains ${drain} HP from your dragon! Your HP is now ${battle.playerDragon.hp}.`;
+                }
+
                 await reply(battleReport);
                 break;
             }
@@ -2563,6 +2749,146 @@ This guide explains how to create, join, and manage a guild.
         });
 
         await reply(response);
+        break;
+      }
+
+      case 'dungeons': {
+        let response = '*Available Dungeons:*\n\n';
+        for (const key in dungeons) {
+            const dungeon = dungeons[key];
+            response += `- *${key}* (Difficulty: ${dungeon.difficulty}, Floors: ${dungeon.floors})\n`;
+        }
+        await reply(response);
+        break;
+      }
+
+      case 'dungeon': {
+        const subCommand = args[0]?.toLowerCase();
+        const dungeon = activeDungeons[from];
+
+        if (!dungeon) return reply('There is no active dungeon.');
+
+        switch (subCommand) {
+            case 'start':
+                if (dungeon.party.length === 0) return reply('The dungeon party is empty.');
+                if (dungeon.party[0].id !== sender) return reply('Only the party leader (the first to enter) can start the dungeon.');
+                if (dungeon.status === 'running') return reply('The dungeon has already been started.');
+
+                dungeon.status = 'running';
+
+                const firstMonsterId = dungeon.monsters.floor1[0];
+                const monster = monsters.find(m => m.id === firstMonsterId);
+                const playerToFight = dungeon.party[0];
+
+                activeBattles[from] = {
+                    player: playerToFight,
+                    playerDragon: { level: 5, xp: 0, ...playerToFight.party[0] },
+                    opponentDragon: monster,
+                    turn: 'player',
+                    environment: dungeon.environment,
+                    isDungeonBattle: true
+                };
+
+                await reply(`The dungeon crawl has begun! ${playerToFight.name} steps forward to face a ${monster.name} on Floor 1!`);
+                break;
+
+            default:
+                await reply('Invalid dungeon command. Use `%dungeon start`.');
+        }
+        break;
+      }
+
+      case 'spawn-dungeon': {
+        if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+        if (activeDungeons[from]) return reply('A dungeon is already active in this group.');
+
+        const dungeonName = args.join(' ');
+        const dungeon = Object.keys(dungeons).find(d => d.toLowerCase() === dungeonName.toLowerCase());
+
+        if (!dungeon) return reply('That dungeon does not exist. Use `%dungeons` to see the list.');
+
+        activeDungeons[from] = {
+            ...dungeons[dungeon],
+            name: dungeon,
+            party: [],
+            floor: 1,
+            startTime: Date.now()
+        };
+
+        const dungeonInfo = activeDungeons[from];
+        const imageUrl = dungeonInfo.environment.bgUrl;
+
+        try {
+            const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+            const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+            let caption = `A dungeon has appeared!\n\n*${dungeonInfo.name}*\nDifficulty: ${dungeonInfo.difficulty}\n\nGuild members can use \`%enter-dungeon\` to join the party! It will disappear in 5 minutes.`;
+            await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
+        } catch (error) {
+            console.error("Error sending dungeon image:", error);
+            await reply(`A dungeon has appeared! *${dungeonInfo.name}* (Image failed to load)`);
+        }
+
+        setTimeout(() => {
+            if (activeDungeons[from] && activeDungeons[from].name === dungeon) {
+                delete activeDungeons[from];
+                sock.sendMessage(from, { text: `The dungeon "${dungeon}" has vanished.` });
+            }
+        }, 5 * 60 * 1000);
+
+        break;
+      }
+
+      case 'enter-dungeon': {
+        const dungeon = activeDungeons[from];
+        if (!dungeon) return reply('There is no active dungeon to enter.');
+        if (!player.guildId) return reply('Only guild members can enter dungeons.');
+        if (dungeon.party.some(p => p.id === sender)) return reply('You are already in the dungeon party.');
+
+        dungeon.party.push(player);
+        await reply(`${player.name} has joined the dungeon party!`);
+        break;
+      }
+
+      case 'challenge-beast': {
+        const beast = activeBeast[from];
+        if (!beast) return reply('There is no Colossal Beast to challenge.');
+        if (activeBattles[from]) return reply('You are already in a battle.');
+        if (player.party.length === 0) return reply('You have no dragons in your party to battle with.');
+
+        const playerDragon = { level: 5, xp: 0, ...player.party[0] };
+        const totalPlayerDamage = playerDragon.moves.reduce((sum, move) => sum + move.damage, 0);
+        playerDragon.hp = Math.floor((totalPlayerDamage * 5) * (1 + playerDragon.level / 10));
+
+        const environment = BATTLE_ENVIRONMENTS.find(e => e.name === beast.environment);
+
+        activeBattles[from] = {
+            player,
+            playerDragon,
+            opponentDragon: beast, // Beast is treated as the opponent dragon
+            turn: 'player',
+            environment: environment,
+            isBeastBattle: true
+        };
+
+        const battleImageUrl = await generateBattleImage(playerDragon, beast, environment);
+        if (battleImageUrl) {
+            try {
+                const imageResponse = await axios.get(battleImageUrl, { responseType: 'arraybuffer' });
+                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+                await sock.sendMessage(from, { image: imageBuffer, caption: `*You challenge ${beast.name} in the ${environment.name}!*` }, { quoted: msg });
+            } catch (imgError) {
+                console.error("Failed to send generated battle image:", imgError);
+                await reply(`*You challenge ${beast.name} in the ${environment.name}!* (Image generation failed)`);
+            }
+        }
+
+        let battleGuide = `*Your ${playerDragon.name}* (HP: ${playerDragon.hp}) vs *${beast.name}* (HP: ${beast.hp})\n\n`;
+        battleGuide += `It's your turn! Use \`%battle fight <1-4>\` to attack.\n`;
+        playerDragon.moves.forEach((move, i) => {
+            battleGuide += `${i + 1}. ${move.name}\n`;
+        });
+
+        await reply(battleGuide);
         break;
       }
 
