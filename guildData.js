@@ -20,7 +20,38 @@ function getAllGuilds() {
 
 function getGuild(guildId) {
     const guilds = loadGuilds();
-    return guilds[guildId];
+    const guild = guilds[guildId];
+    if (!guild) return null;
+
+    // Data migration for existing guilds
+    let needsSave = false;
+    const defaults = {
+        slogan: "A new guild, ready for adventure!",
+        vice_leader: null,
+        officers: [],
+        joinRequests: [],
+        level: 1,
+        xp: 0,
+        tier: "Bronze",
+        perks: { xp_boost: 0, loot_bonus: 0 },
+        treasury: 0,
+        bank_reserve: 0,
+        card_vault: [],
+        achievements: []
+    };
+
+    for (const key in defaults) {
+        if (guild[key] === undefined) {
+            guild[key] = defaults[key];
+            needsSave = true;
+        }
+    }
+
+    if (needsSave) {
+        updateGuild(guild);
+    }
+
+    return guild;
 }
 
 function updateGuild(guildData) {
@@ -40,12 +71,20 @@ function createGuild(guildName, founderPlayer) {
     const newGuild = {
         id: guildId,
         name: guildName,
+        slogan: "A new guild, ready for adventure!",
         master: founderPlayer.id,
+        vice_leader: null,
         officers: [],
         members: [founderPlayer.id],
         joinRequests: [],
         level: 1,
         xp: 0,
+        tier: "Bronze",
+        perks: { xp_boost: 0, loot_bonus: 0 },
+        treasury: 0,
+        bank_reserve: 0,
+        card_vault: [],
+        achievements: []
     };
 
     guilds[guildId] = newGuild;

@@ -37,6 +37,13 @@ const CARD_PACK_COST = 300;
 const CARD_PACK_SIZE = 3;
 const GUILD_CREATE_COST = 10000;
 const UNSPLASH_ACCESS_KEY = 'YRq1pHreWswtEjw1_iMs0XjuRfJzM1dSj4Kk6FOSmPk';
+const GUILD_TIERS = {
+    1: { name: "Bronze", xp_boost: 0.05, loot_bonus: 0.05 },
+    10: { name: "Silver", xp_boost: 0.10, loot_bonus: 0.10 },
+    25: { name: "Gold", xp_boost: 0.15, loot_bonus: 0.15 },
+    50: { name: "Platinum", xp_boost: 0.20, loot_bonus: 0.20 },
+    100: { name: "Mythic", xp_boost: 0.25, loot_bonus: 0.25 },
+};
 const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
 const rolesHierarchy = ['user', 'mod', 'owner'];
@@ -152,12 +159,59 @@ async function handleDungeonProgression(from, sock) {
             // Dungeon complete!
             await sock.sendMessage(from, { text: `Congratulations! Your party has cleared the ${dungeon.name}!` });
 
+            const guildXpGained = 100; // Base XP for dungeon clear
+            const notifiedGuilds = new Set(); // To prevent spamming guild level up messages
+
             dungeon.party.forEach(p => {
                 const player = getPlayer(p.id);
-                player.gold += dungeon.rewards.gold;
-                player.playerXp += dungeon.rewards.xp;
+                let goldGained = dungeon.rewards.gold;
+                let xpGained = dungeon.rewards.xp;
+                let rewardMessage = "";
+
+                if (player.guildId) {
+                    const guild = getGuild(player.guildId);
+                    if (guild) {
+                        // Apply Perks
+                        const goldBonus = Math.floor(goldGained * guild.perks.loot_bonus);
+                        const xpBonus = Math.floor(xpGained * guild.perks.xp_boost);
+                        goldGained += goldBonus;
+                        xpGained += xpBonus;
+                        if (goldBonus > 0 || xpBonus > 0) {
+                            rewardMessage += ` (Guild Bonus: +${goldBonus} Gold, +${xpBonus} XP)`;
+                        }
+
+                        // Grant Guild XP, but only announce level-up once per guild
+                        if (!notifiedGuilds.has(guild.id)) {
+                            guild.xp += guildXpGained;
+                            sock.sendMessage(from, { text: `Your guild "${guild.name}" gained ${guildXpGained} XP for clearing the dungeon!` });
+
+                            const requiredXp = guild.level * 1000;
+                            if (guild.xp >= requiredXp) {
+                                guild.level++;
+                                guild.xp -= requiredXp;
+                                sock.sendMessage(from, { text: `*Congratulations! Your guild has reached Level ${guild.level}!*` });
+
+                                const newTierKey = Object.keys(GUILD_TIERS).reverse().find(level => guild.level >= parseInt(level));
+                                if (newTierKey) {
+                                    const newTier = GUILD_TIERS[newTierKey];
+                                    if (newTier.name !== guild.tier) {
+                                        guild.tier = newTier.name;
+                                        guild.perks.xp_boost = newTier.xp_boost;
+                                        guild.perks.loot_bonus = newTier.loot_bonus;
+                                        sock.sendMessage(from, { text: `Your guild has been promoted to ${guild.tier} Tier, unlocking new perks!` });
+                                    }
+                                }
+                            }
+                            notifiedGuilds.add(guild.id);
+                        }
+                        updateGuild(guild);
+                    }
+                }
+
+                player.gold += goldGained;
+                player.playerXp += xpGained;
                 updatePlayer(player);
-                sock.sendMessage(from, { text: `${player.name} receives ${dungeon.rewards.gold} gold and ${dungeon.rewards.xp} XP!` });
+                sock.sendMessage(from, { text: `${player.name} receives ${goldGained} gold and ${xpGained} XP!${rewardMessage}` });
             });
 
             delete activeDungeons[from];
@@ -440,7 +494,10 @@ async function main() {
 %guild join <name> - Request to join a guild.
 %guild info [name] - View info about your guild or another.
 %guild accept @user - Accept a user's request to join (Master only).
-%guild manage <promote|kick> @user - Promote or kick a member (Master/Officer only).
+%guild manage <promote|demote|kick> @user - Manage guild members (Leaders only).
+%guild slogan <new_slogan> - Change your guild's slogan (Master only).
+%guild deposit <amount> - Deposit gold into the guild treasury.
+%guild withdraw <amount> - Withdraw gold from the treasury (Master only).
 
 *Gifting & Trading:*
 %givedragon <dragon_index> @user - Give a dragon to another player.
@@ -619,19 +676,29 @@ This guide explains how to participate in and run a tournament.
             case 'guild':
                 await reply(
 `*Guide: Guilds*
-This guide explains how to create, join, and manage a guild.
+Guilds are communities of players who can work together, access special features, and compete for glory.
 
 *Finding & Joining:*
-- Use \`%guilds\` to see a list of all guilds.
-- Use \`%guild join <Guild Name>\` to request to join a guild. Your request must be accepted by the Guild Master.
-- Use \`%guild info [Guild Name]\` to see details about your guild or another guild.
+- \`%guilds\`: See a list of all existing guilds.
+- \`%guild join <Guild Name>\`: Request to join a guild.
+- \`%guild info [Guild Name]\`: View detailed stats for your guild or another.
 
-*Creating & Managing:*
-- Use \`%guild create <Guild Name>\` to found a new guild. This costs 10,000 gold.
-- The creator becomes the Guild Master.
-- The Guild Master can use \`%guild accept @user\` to accept members.
-- The Guild Master can use \`%guild manage promote @user\` to promote a member to Officer.
-- Masters and Officers can use \`%guild manage kick @user\` to remove members.`
+*Leveling & Perks:*
+- Guilds earn XP from member activities like winning battles and clearing dungeons.
+- As your guild levels up, it will advance through Tiers (Bronze, Silver, Gold, etc.).
+- Higher tiers provide better perks, such as an XP Boost and a Loot Bonus for all members!
+
+*Management & Roles:*
+- \`%guild create <name>\`: Found a new guild for 10,000 gold. You become the Guild Master.
+- \`%guild slogan <text>\`: As Guild Master, set your guild's public slogan.
+- \`%guild accept @user\`: Guild Master accepts a join request.
+- \`%guild manage promote @user\`: Guild Master promotes a member to Officer, or an Officer to Vice Leader.
+- \`%guild manage demote @user\`: Guild Master demotes a Vice Leader or Officer.
+- \`%guild manage kick @user\`: Remove a member from the guild (Leaders only).
+
+*Treasury:*
+- \`%guild deposit <amount>\`: Any member can deposit gold into the guild's treasury.
+- \`%guild withdraw <amount>\`: Only the Guild Master can withdraw gold from the treasury.`
                 );
                 break;
             case 'dungeons':
@@ -759,6 +826,44 @@ These are world bosses that can be spawned by an admin.
                 await reply(`${acceptedPlayerInfo.name} has been accepted into "${myGuild.name}"!`);
                 break;
             }
+            case 'slogan': {
+                if (!player.guildId) return reply('You are not in a guild.');
+                const myGuild = getGuild(player.guildId);
+                if (myGuild.master !== sender) return reply('Only the Guild Master can change the slogan.');
+                const newSlogan = args.slice(1).join(' ');
+                if (!newSlogan) return reply('Please provide a new slogan. Usage: `%guild slogan <new slogan>`');
+                myGuild.slogan = newSlogan;
+                updateGuild(myGuild);
+                await reply(`Your guild's slogan has been updated to: "${newSlogan}"`);
+                break;
+            }
+            case 'deposit': {
+                if (!player.guildId) return reply('You are not in a guild.');
+                const myGuild = getGuild(player.guildId);
+                const amount = parseInt(args[1]);
+                if (isNaN(amount) || amount <= 0) return reply('Invalid amount.');
+                if (player.gold < amount) return reply('You do not have enough gold.');
+                player.gold -= amount;
+                myGuild.treasury += amount;
+                updateGuild(myGuild);
+                savePlayer();
+                await reply(`You have deposited ${amount} gold into the guild treasury. The treasury now has ${myGuild.treasury} gold.`);
+                break;
+            }
+            case 'withdraw': {
+                if (!player.guildId) return reply('You are not in a guild.');
+                const myGuild = getGuild(player.guildId);
+                if (myGuild.master !== sender) return reply('Only the Guild Master can withdraw from the treasury.');
+                const amount = parseInt(args[1]);
+                if (isNaN(amount) || amount <= 0) return reply('Invalid amount.');
+                if (myGuild.treasury < amount) return reply('The guild treasury does not have enough gold.');
+                myGuild.treasury -= amount;
+                player.gold += amount;
+                updateGuild(myGuild);
+                savePlayer();
+                await reply(`You have withdrawn ${amount} gold from the guild treasury.`);
+                break;
+            }
             case 'manage': {
                 if (!player.guildId) return reply('You are not in a guild.');
 
@@ -767,31 +872,62 @@ These are world bosses that can be spawned by an admin.
                 const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
 
                 if (!action || !targetId) {
-                    return reply('Usage: `%guild manage <promote|kick> @user`');
+                    return reply('Usage: `%guild manage <promote|demote|kick> @user`');
                 }
 
                 switch (action) {
-                    case 'promote':
+                    case 'promote': {
                         if (myGuild.master !== sender) return reply('Only the Guild Master can promote members.');
                         if (!myGuild.members.includes(targetId)) return reply('That player is not in your guild.');
-                        if (myGuild.officers.includes(targetId)) return reply('That player is already an officer.');
 
-                        myGuild.officers.push(targetId);
-                        updateGuild(myGuild);
-                        await reply(`Promoted @${targetId.split('@')[0]} to Officer.`);
+                        if (myGuild.officers.includes(targetId)) {
+                            // Promote Officer to Vice Leader
+                            if (myGuild.vice_leader) return reply('There is already a Vice Leader. Demote them first.');
+                            myGuild.vice_leader = targetId;
+                            myGuild.officers = myGuild.officers.filter(id => id !== targetId);
+                            updateGuild(myGuild);
+                            await reply(`Promoted @${targetId.split('@')[0]} to Vice Leader.`);
+                        } else {
+                            // Promote Member to Officer
+                            if (myGuild.officers.includes(targetId)) return reply('That player is already an officer.');
+                            myGuild.officers.push(targetId);
+                            updateGuild(myGuild);
+                            await reply(`Promoted @${targetId.split('@')[0]} to Officer.`);
+                        }
                         break;
+                    }
+                    case 'demote': {
+                        if (myGuild.master !== sender) return reply('Only the Guild Master can demote members.');
+                        if (!myGuild.members.includes(targetId)) return reply('That player is not in your guild.');
 
-                    case 'kick':
+                        if (myGuild.vice_leader === targetId) {
+                            // Demote Vice Leader to Officer
+                            myGuild.vice_leader = null;
+                            myGuild.officers.push(targetId);
+                            updateGuild(myGuild);
+                            await reply(`Demoted @${targetId.split('@')[0]} to Officer.`);
+                        } else if (myGuild.officers.includes(targetId)) {
+                            // Demote Officer to Member
+                            myGuild.officers = myGuild.officers.filter(id => id !== targetId);
+                            updateGuild(myGuild);
+                            await reply(`Demoted @${targetId.split('@')[0]} to Member.`);
+                        } else {
+                            await reply('That player does not hold a promotable rank.');
+                        }
+                        break;
+                    }
+                    case 'kick': {
                         const isMaster = myGuild.master === sender;
-                        const isOfficer = myGuild.officers.includes(sender);
-                        if (!isMaster && !isOfficer) return reply('Only the Guild Master or Officers can kick members.');
+                        const isOfficer = myGuild.officers.includes(sender) || myGuild.vice_leader === sender;
+                        if (!isMaster && !isOfficer) return reply('Only the Guild Master, Vice Leader, or Officers can kick members.');
 
                         if (!myGuild.members.includes(targetId)) return reply('That player is not in your guild.');
                         if (targetId === myGuild.master) return reply('You cannot kick the Guild Master.');
-                        if (myGuild.officers.includes(targetId) && !isMaster) return reply('Only the Guild Master can kick an Officer.');
+                        if ((myGuild.officers.includes(targetId) || myGuild.vice_leader === targetId) && !isMaster) return reply('Only the Guild Master can kick other leaders.');
 
                         myGuild.members = myGuild.members.filter(id => id !== targetId);
                         myGuild.officers = myGuild.officers.filter(id => id !== targetId);
+                        if (myGuild.vice_leader === targetId) myGuild.vice_leader = null;
                         updateGuild(myGuild);
 
                         const kickedPlayer = getPlayer(targetId);
@@ -800,9 +936,9 @@ These are world bosses that can be spawned by an admin.
 
                         await reply(`Kicked @${targetId.split('@')[0]} from the guild.`);
                         break;
-
+                    }
                     default:
-                        await reply('Invalid management command. Use `promote` or `kick`.');
+                        await reply('Invalid management command. Use `promote`, `demote`, or `kick`.');
                 }
                 break;
             }
@@ -821,10 +957,21 @@ These are world bosses that can be spawned by an admin.
 
                 if (!targetGuild) return reply('Could not find the specified guild.');
 
+                const requiredXp = targetGuild.level * 1000;
                 const masterName = getPlayer(targetGuild.master)?.name || 'Unknown';
                 const memberNames = targetGuild.members.map(id => getPlayer(id)?.name || 'Unknown');
 
-                let response = `*Guild Info: ${targetGuild.name}*\n\n`;
+                let response = `*Guild Info: ${targetGuild.name}*\n`;
+                response += `"${targetGuild.slogan}"\n\n`;
+                response += `*Tier:* ${targetGuild.tier}\n`;
+                response += `*Level:* ${targetGuild.level} (${targetGuild.xp} / ${requiredXp} XP)\n\n`;
+
+                response += `*Perks:*\n`;
+                response += `- XP Boost: +${targetGuild.perks.xp_boost * 100}%\n`;
+                response += `- Loot Bonus: +${targetGuild.perks.loot_bonus * 100}%\n\n`;
+
+                response += `*Treasury:* ${targetGuild.treasury} Gold\n\n`;
+
                 response += `*Master:* ${masterName}\n`;
                 response += `*Officers:* ${targetGuild.officers.length}\n`;
                 response += `*Total Members:* ${targetGuild.members.length}\n\n`;
@@ -2546,11 +2693,55 @@ These are world bosses that can be spawned by an admin.
                     if (battle.isBeastBattle) {
                         const beast = battle.opponentDragon;
                         const winner = battle.player;
+                        let finalReport = "";
 
-                        winner.gold += 1000000;
+                        let goldGained = 1000000;
+                        let playerXpGained = 5000; // Large XP reward for beast
+
+                        if (winner.guildId) {
+                            const guild = getGuild(winner.guildId);
+                            if (guild) {
+                                // Apply Perks
+                                const goldBonus = Math.floor(goldGained * guild.perks.loot_bonus);
+                                goldGained += goldBonus;
+                                if (goldBonus > 0) finalReport += `\nYour guild's Treasury Boost perk earned you an extra ${goldBonus} gold!`;
+
+                                const xpBonus = Math.floor(playerXpGained * guild.perks.xp_boost);
+                                playerXpGained += xpBonus;
+                                if (xpBonus > 0) finalReport += `\nYour guild's Training Boost perk earned you an extra ${xpBonus} XP!`;
+
+                                // Grant Guild XP
+                                const guildXpGained = 1000; // Massive XP for beast kill
+                                guild.xp += guildXpGained;
+                                finalReport += `\nYour guild "${guild.name}" gained ${guildXpGained} XP for this legendary victory!`;
+
+                                // Check for guild level up
+                                const requiredXp = guild.level * 1000;
+                                if (guild.xp >= requiredXp) {
+                                    guild.level++;
+                                    guild.xp -= requiredXp;
+                                    finalReport += `\n*Incredible! Your guild has reached Level ${guild.level}!*`;
+
+                                    const newTierKey = Object.keys(GUILD_TIERS).reverse().find(level => guild.level >= parseInt(level));
+                                    if (newTierKey) {
+                                        const newTier = GUILD_TIERS[newTierKey];
+                                        if (newTier.name !== guild.tier) {
+                                            guild.tier = newTier.name;
+                                            guild.perks.xp_boost = newTier.xp_boost;
+                                            guild.perks.loot_bonus = newTier.loot_bonus;
+                                            finalReport += `\nYour guild has been promoted to ${guild.tier} Tier, unlocking new perks!`;
+                                        }
+                                    }
+                                }
+                                updateGuild(guild);
+                            }
+                        }
+
+                        winner.gold += goldGained;
+                        winner.playerXp += playerXpGained;
                         winner.titles.push(`${beast.name} Slayer`);
 
-                        const tamedBeast = { ...beast, id: `beast_${beast.id}` }; // Ensure unique ID
+                        const tamedBeast = { ...beast, id: `beast_${beast.id}` };
                         if (winner.party.length < 6) {
                             winner.party.push(tamedBeast);
                         } else {
@@ -2561,7 +2752,7 @@ These are world bosses that can be spawned by an admin.
                         delete activeBattles[from];
                         delete activeBeast[from];
 
-                        await reply(`*Incredible! ${winner.name} has defeated and tamed ${beast.name}!* \n\nThey have been awarded 1,000,000 gold and the title "${beast.name} Slayer"!`);
+                        await reply(`*Incredible! ${winner.name} has defeated and tamed ${beast.name}!* \n\nThey have been awarded ${goldGained} gold, ${playerXpGained} XP, and the title "${beast.name} Slayer"!${finalReport}`);
                         return;
                     }
 
@@ -2596,9 +2787,48 @@ These are world bosses that can be spawned by an admin.
                         }
                     }
 
+                    // --- Guild & Player XP Logic ---
+                    let playerXpGained = PLAYER_XP_GAIN;
+                    if (winner.guildId) {
+                        const guild = getGuild(winner.guildId);
+                        if (guild) {
+                            // Guild XP
+                            const guildXpGained = 10; // Base XP for a win
+                            guild.xp += guildXpGained;
+                            battleReport += `\nYour guild "${guild.name}" gained ${guildXpGained} XP!`;
+
+                            // Apply player XP perk
+                            const xpBonus = Math.floor(playerXpGained * guild.perks.xp_boost);
+                            if (xpBonus > 0) {
+                                playerXpGained += xpBonus;
+                                battleReport += ` (Guild Bonus: +${xpBonus} XP!)`;
+                            }
+
+                            // Check for guild level up
+                            const requiredXp = guild.level * 1000; // Example formula
+                            if (guild.xp >= requiredXp) {
+                                guild.level++;
+                                guild.xp -= requiredXp;
+                                battleReport += `\n*Congratulations! Your guild has reached Level ${guild.level}!*`;
+
+                                const newTierKey = Object.keys(GUILD_TIERS).reverse().find(level => guild.level >= parseInt(level));
+                                if (newTierKey) {
+                                    const newTier = GUILD_TIERS[newTierKey];
+                                    if (newTier.name !== guild.tier) {
+                                        guild.tier = newTier.name;
+                                        guild.perks.xp_boost = newTier.xp_boost;
+                                        guild.perks.loot_bonus = newTier.loot_bonus;
+                                        battleReport += `\nYour guild has been promoted to ${guild.tier} Tier, unlocking new perks!`;
+                                    }
+                                }
+                            }
+                            updateGuild(guild);
+                        }
+                    }
+
                     // Player XP
-                    winner.playerXp += PLAYER_XP_GAIN;
-                    battleReport += `\nYou gained ${PLAYER_XP_GAIN} player XP!`;
+                    winner.playerXp += playerXpGained;
+                    battleReport += `\nYou gained ${playerXpGained} player XP!`;
 
                     if (winner.playerXp >= winner.playerLevel * 100) {
                         winner.playerLevel++;
