@@ -17,8 +17,8 @@ const shop = require('./shop.js');
 const cards = require('./cardData.js');
 const { getGroupSettings, updateGroupSettings } = require('./groupSettings.js');
 const { createGuild, getGuild, getAllGuilds, updateGuild } = require('./guildData.js');
-const dungeons = require('./dungeonData.js');
-const monsters = require('./monsterData.js');
+const { DUNGEON_TIERS: dungeonTiers, generateDungeon } = require('./dungeonData.js');
+const { MONSTERS: monsters } = require('./monsters.js');
 const beasts = require('./beastData.js');
 const cloudinary = require('cloudinary').v2;
 
@@ -112,12 +112,11 @@ async function handleDungeonProgression(from, sock) {
     // A monster was just defeated. Let's see what's next.
     dungeon.monstersDefeated = (dungeon.monstersDefeated || 0) + 1;
     const currentFloor = `floor${dungeon.floor}`;
-    const monstersOnFloor = dungeon.monsters[currentFloor].length;
+    const monstersOnFloor = dungeon.monster_layout[currentFloor].length;
 
     if (dungeon.monstersDefeated < monstersOnFloor) {
         // More monsters on this floor
-        const nextMonsterId = dungeon.monsters[currentFloor][dungeon.monstersDefeated];
-        const monster = monsters.find(m => m.id === nextMonsterId);
+        const monster = dungeon.monster_layout[currentFloor][dungeon.monstersDefeated];
 
         // Cycle through the party
         const nextPlayerIndex = dungeon.monstersDefeated % dungeon.party.length;
@@ -140,8 +139,7 @@ async function handleDungeonProgression(from, sock) {
             dungeon.floor++;
             dungeon.monstersDefeated = 0;
             const nextFloor = `floor${dungeon.floor}`;
-            const nextMonsterId = dungeon.monsters[nextFloor][0];
-            const monster = monsters.find(m => m.id === nextMonsterId);
+            const monster = dungeon.monster_layout[nextFloor][0];
             const playerToFight = dungeon.party[0]; // First player starts the new floor
 
             activeBattles[from] = {
@@ -213,6 +211,20 @@ async function handleDungeonProgression(from, sock) {
                 updatePlayer(player);
                 sock.sendMessage(from, { text: `${player.name} receives ${goldGained} gold and ${xpGained} XP!${rewardMessage}` });
             });
+
+            // Distribute special rewards
+            let specialRewardsMessage = "\n*Special Rewards Found!*";
+            if (dungeon.rewards.special && dungeon.rewards.special.length > 0) {
+                dungeon.party.forEach(p => {
+                    const player = getPlayer(p.id);
+                    dungeon.rewards.special.forEach(reward => {
+                        player.inventory[reward] = (player.inventory[reward] || 0) + 1;
+                        specialRewardsMessage += `\n- ${player.name} received a ${reward}!`;
+                    });
+                    updatePlayer(player);
+                });
+                await sock.sendMessage(from, { text: specialRewardsMessage });
+            }
 
             delete activeDungeons[from];
         }
@@ -2983,11 +2995,12 @@ These are world bosses that can be spawned by an admin.
       }
 
       case 'dungeons': {
-        let response = '*Available Dungeons:*\n\n';
-        for (const key in dungeons) {
-            const dungeon = dungeons[key];
-            response += `- *${key}* (Difficulty: ${dungeon.difficulty}, Floors: ${dungeon.floors})\n`;
+        let response = '*Available Dungeon Difficulties:*\n\n';
+        for (const key in dungeonTiers) {
+            const tier = dungeonTiers[key];
+            response += `*${key}* - "${tier.name}"\n`;
         }
+        response += "\nUse `%spawn-dungeon <Difficulty>` to start a dungeon (Admins only).";
         await reply(response);
         break;
       }
@@ -3006,20 +3019,28 @@ These are world bosses that can be spawned by an admin.
 
                 dungeon.status = 'running';
 
-                const firstMonsterId = dungeon.monsters.floor1[0];
-                const monster = monsters.find(m => m.id === firstMonsterId);
+                // Set a time limit for the dungeon run
+                const dungeonId = from;
+                setTimeout(() => {
+                    if (activeDungeons[dungeonId] && activeDungeons[dungeonId].status === 'running') {
+                        delete activeDungeons[dungeonId];
+                        sock.sendMessage(dungeonId, { text: `The party took too long to clear the "${dungeon.name}" dungeon, and it has collapsed!` });
+                    }
+                }, 30 * 60 * 1000); // 30 minutes
+
+                const firstMonster = dungeon.monster_layout.floor1[0];
                 const playerToFight = dungeon.party[0];
 
                 activeBattles[from] = {
                     player: playerToFight,
                     playerDragon: { level: 5, xp: 0, ...playerToFight.party[0] },
-                    opponentDragon: monster,
+                    opponentDragon: firstMonster,
                     turn: 'player',
                     environment: dungeon.environment,
                     isDungeonBattle: true
                 };
 
-                await reply(`The dungeon crawl has begun! ${playerToFight.name} steps forward to face a ${monster.name} on Floor 1!`);
+                await reply(`The dungeon crawl has begun! ${playerToFight.name} steps forward to face a ${firstMonster.name} on Floor 1!`);
                 break;
 
             default:
@@ -3032,16 +3053,25 @@ These are world bosses that can be spawned by an admin.
         if (!hasRole('mod')) return reply('You do not have permission to use this command.');
         if (activeDungeons[from]) return reply('A dungeon is already active in this group.');
 
-        const dungeonName = args.join(' ');
-        const dungeon = Object.keys(dungeons).find(d => d.toLowerCase() === dungeonName.toLowerCase());
+        const difficulty = args.join('');
+        const difficulties = Object.keys(dungeonTiers);
+        const requestedDifficulty = difficulties.find(d => d.toLowerCase() === difficulty.toLowerCase());
 
-        if (!dungeon) return reply('That dungeon does not exist. Use `%dungeons` to see the list.');
+        if (!difficulty || !requestedDifficulty) {
+            return reply(`Invalid difficulty. Use one of: ${difficulties.join(', ')}`);
+        }
+
+        const newDungeon = generateDungeon(requestedDifficulty, monsters);
+        if (!newDungeon) {
+            return reply('There was an error generating the dungeon. Please check the logs.');
+        }
 
         activeDungeons[from] = {
-            ...dungeons[dungeon],
-            name: dungeon,
+            ...newDungeon,
             party: [],
             floor: 1,
+            monstersDefeated: 0,
+            status: 'forming',
             startTime: Date.now()
         };
 
@@ -3051,7 +3081,7 @@ These are world bosses that can be spawned by an admin.
         try {
             const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
             const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-            let caption = `A dungeon has appeared!\n\n*${dungeonInfo.name}*\nDifficulty: ${dungeonInfo.difficulty}\n\nGuild members can use \`%enter-dungeon\` to join the party! It will disappear in 5 minutes.`;
+            let caption = `A dungeon has appeared!\n\n*${dungeonInfo.name}* (Difficulty: ${dungeonInfo.difficulty})\n\nGuild members can use \`%enter-dungeon\` to join the party! It will disappear in 5 minutes.`;
             await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
         } catch (error) {
             console.error("Error sending dungeon image:", error);
@@ -3059,9 +3089,9 @@ These are world bosses that can be spawned by an admin.
         }
 
         setTimeout(() => {
-            if (activeDungeons[from] && activeDungeons[from].name === dungeon) {
+            if (activeDungeons[from] && activeDungeons[from].status === 'forming') {
                 delete activeDungeons[from];
-                sock.sendMessage(from, { text: `The dungeon "${dungeon}" has vanished.` });
+                sock.sendMessage(from, { text: `The dungeon "${dungeonInfo.name}" was not started in time and has vanished.` });
             }
         }, 5 * 60 * 1000);
 
@@ -3071,11 +3101,12 @@ These are world bosses that can be spawned by an admin.
       case 'enter-dungeon': {
         const dungeon = activeDungeons[from];
         if (!dungeon) return reply('There is no active dungeon to enter.');
+        if (dungeon.status === 'running') return reply('This dungeon crawl has already begun.');
         if (!player.guildId) return reply('Only guild members can enter dungeons.');
         if (dungeon.party.some(p => p.id === sender)) return reply('You are already in the dungeon party.');
 
         dungeon.party.push(player);
-        await reply(`${player.name} has joined the dungeon party!`);
+        await reply(`${player.name} has joined the dungeon party! Current party size: ${dungeon.party.length}.`);
         break;
       }
 
