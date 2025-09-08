@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "axios": "^0.27.2",
-    "baileys": "^6.7.19",
     "cloudinary": "^2.7.0",
-    "pino": "^7.11.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.0",
     "ytdlp-nodejs": "^2.3.4"
   },
   "devDependencies": {

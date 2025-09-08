@@ -3,10 +3,13 @@ module.exports = {
   description: 'Insults a user.',
   async execute(context) {
     const { msg, reply, getPlayer, INSULTS } = context;
-    const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!targetId) return reply('You need to mention a user to insult.');
-    const targetPlayer = getPlayer(targetId);
+    const mentions = await msg.getMentions();
+    if (!mentions || mentions.length === 0) {
+        return reply('You need to mention a user to insult.');
+    }
+    const targetContact = mentions[0];
+    const targetPlayer = getPlayer(targetContact.id._serialized);
     const insult = INSULTS[Math.floor(Math.random() * INSULTS.length)];
-    await reply(`${targetPlayer.name}, ${insult}`);
+    await reply(`@${targetContact.id.user}, ${insult}`, { mentions: [targetContact] });
   },
 };

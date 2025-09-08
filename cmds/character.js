@@ -3,11 +3,14 @@ module.exports = {
   description: 'Assigns a random character to a user.',
   async execute(context) {
     const { msg, reply, getPlayer } = context;
-    const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!targetId) return reply('You need to mention a user.');
-    const targetPlayer = getPlayer(targetId);
+    const mentions = await msg.getMentions();
+    if (!mentions || mentions.length === 0) {
+        return reply('You need to mention a user.');
+    }
+    const targetContact = mentions[0];
+    const targetPlayer = getPlayer(targetContact.id._serialized);
     const characters = ['a hero', 'a villain', 'a sidekick', 'a mysterious stranger'];
     const character = characters[Math.floor(Math.random() * characters.length)];
-    await reply(`${targetPlayer.name} is ${character}.`);
+    await reply(`@${targetContact.id.user} is ${character}.`, { mentions: [targetContact] });
   },
 };

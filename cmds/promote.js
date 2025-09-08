@@ -5,12 +5,18 @@ module.exports = {
   async execute(context) {
     const { hasRole, reply, msg, getPlayer, updatePlayer } = context;
     if (!hasRole('owner')) return reply('You do not have permission to use this command.');
-    const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!targetId) return reply('You need to mention a user to promote.');
-    const targetPlayer = getPlayer(targetId);
-    if (targetPlayer.roles.includes('mod')) return reply(`${targetPlayer.name} is already a mod.`);
+
+    const mentions = await msg.getMentions();
+    if (!mentions || mentions.length === 0) {
+        return reply('You need to mention a user to promote.');
+    }
+    const targetContact = mentions[0];
+    const targetPlayer = getPlayer(targetContact.id._serialized);
+
+    if (targetPlayer.roles.includes('mod')) return reply(`@${targetContact.id.user} is already a mod.`, { mentions: [targetContact] });
+
     targetPlayer.roles.push('mod');
     updatePlayer(targetPlayer);
-    await reply(`${targetPlayer.name} has been promoted to mod.`);
+    await reply(`@${targetContact.id.user} has been promoted to mod.`, { mentions: [targetContact] });
   },
 };
