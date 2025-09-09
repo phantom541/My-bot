@@ -1,17 +1,28 @@
 module.exports = {
   name: 'givegold',
-  description: 'Gives gold to a user (owner only).',
+  description: 'Give gold to a user (owner only).',
   async execute(context) {
-    const { hasRole, reply, msg, args, getPlayer, updatePlayer } = context;
-    if (!hasRole('owner')) return reply('You do not have permission to use this command.');
-    const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    const amount = parseInt(args[1]);
-    if (!targetId || isNaN(amount) || amount <= 0) {
-        return reply('Usage: %givegold @user <amount>');
+    const { msg, args, reply, hasRole, getPlayer, updatePlayer } = context;
+
+    if (!hasRole('owner')) {
+      return reply('You do not have permission to use this command.');
     }
-    const targetPlayer = getPlayer(targetId);
-    targetPlayer.gold += amount;
-    updatePlayer(targetPlayer);
-    await reply(`Gave ${amount} gold to ${targetPlayer.name}.`);
+
+    const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    // The amount should be the argument after the mention. In many cases, the mention is not in args.
+    // A robust way is to find the numerical argument.
+    const amount = parseInt(args.find(arg => !isNaN(parseInt(arg))));
+
+
+    if (!mentionedJid || isNaN(amount) || amount <= 0) {
+      return reply('Invalid usage. Use `%givegold @user <amount>`');
+    }
+
+    const recipient = getPlayer(mentionedJid);
+    recipient.gold += amount;
+    updatePlayer(recipient);
+
+    const recipientName = recipient.name || mentionedJid.split('@')[0];
+    await reply(`Gave ${amount} gold to ${recipientName}.`);
   },
 };

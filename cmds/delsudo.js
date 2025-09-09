@@ -1,6 +1,6 @@
 module.exports = {
-  name: 'delpower',
-  description: 'Remove a power user.',
+  name: 'delsudo',
+  description: 'Demote a mod.',
   async execute(context) {
     const { msg, reply, hasRole, getPlayer, updatePlayer } = context;
 
@@ -10,18 +10,18 @@ module.exports = {
 
     const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
     if (!mentionedJid) {
-      return reply('Please mention a user to remove as a power user.');
+      return reply('Please mention a user to demote.');
     }
 
     const playerToDemote = getPlayer(mentionedJid);
-    if (!playerToDemote.roles || !playerToDemote.roles.includes('power')) {
-      return reply('This user is not a power user.');
+    if (!playerToDemote.roles || !playerToDemote.roles.includes('mod')) {
+      return reply('This user is not a mod.');
     }
 
-    playerToDemote.roles = playerToDemote.roles.filter(role => role !== 'power');
+    playerToDemote.roles = playerToDemote.roles.filter(role => role !== 'mod');
     updatePlayer(playerToDemote);
 
     const targetName = playerToDemote.name || mentionedJid.split('@')[0];
-    await reply(`${targetName} has been removed as a power user.`);
+    await reply(`${targetName} has been demoted and is no longer a bot moderator.`);
   },
 };

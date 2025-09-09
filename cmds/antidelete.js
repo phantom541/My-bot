@@ -1,18 +1,20 @@
 module.exports = {
   name: 'antidelete',
-  description: 'Enables or disables anti-delete.',
+  description: 'Enable or disable anti-delete.',
   async execute(context) {
-    const { hasRole, reply, args, botSettings } = context;
-    if (!hasRole('owner')) return reply('You do not have permission to use this command.');
-    const option = args[0]?.toLowerCase();
-    if (option === 'on') {
-        botSettings.antideleteEnabled = true;
-        await reply('Anti-delete enabled.');
-    } else if (option === 'off') {
-        botSettings.antideleteEnabled = false;
-        await reply('Anti-delete disabled.');
-    } else {
-        await reply('Usage: %antidelete <on/off>');
+    const { args, reply, hasRole, botSettings } = context;
+
+    if (!hasRole('owner')) {
+      return reply('You do not have permission to use this command.');
     }
+
+    const option = args[0]?.toLowerCase();
+    if (option !== 'on' && option !== 'off') {
+      return reply('Invalid option. Use `%antidelete on` or `%antidelete off`.');
+    }
+
+    botSettings.antideleteEnabled = (option === 'on');
+
+    await reply(`Anti-delete feature has been turned ${option}.`);
   },
 };

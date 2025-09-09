@@ -1,6 +1,6 @@
 module.exports = {
   name: 'mart',
-  aliases: ['shop'], // 'shop' is a good alias
+  aliases: ['shop'],
   description: 'Displays items available for purchase.',
   async execute(context) {
     const { reply, shop } = context;

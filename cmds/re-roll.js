@@ -1,31 +1,45 @@
+function getRandomMoves(dragon, allDragonsData) {
+  const dragonType = dragon.type;
+  // Get all moves from all dragons of the same type
+  const allMovesOfType = allDragonsData
+    .filter(d => d.type === dragonType)
+    .flatMap(d => d.moves);
+
+  // Get unique moves by name
+  const uniqueMoves = [...new Map(allMovesOfType.map(m => [m.name, m])).values()];
+
+  const newMoves = [];
+  const numMovesToSelect = Math.min(4, uniqueMoves.length);
+
+  // Shuffle and pick the first 4
+  const shuffledMoves = uniqueMoves.sort(() => 0.5 - Math.random());
+  return shuffledMoves.slice(0, numMovesToSelect);
+}
+
 module.exports = {
   name: 're-roll',
-  description: 'Re-rolls a dragon\'s moves (owner/mod only).',
+  description: "Re-roll a dragon's moves (owner/mod only).",
   async execute(context) {
-    const { hasRole, reply, args, player, savePlayer, dragons } = context;
-    if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+    const { args, player, savePlayer, reply, hasRole, dragons } = context;
+
+    if (!hasRole('mod')) {
+      return reply('You do not have permission to use this command.');
+    }
 
     const dragonIndex = parseInt(args[0]) - 1;
-    if (isNaN(dragonIndex) || dragonIndex < 0 || dragonIndex >= player.party.length) {
-        return reply('Invalid dragon index.');
+
+    if (isNaN(dragonIndex) || !player.party || dragonIndex < 0 || dragonIndex >= player.party.length) {
+      return reply('Invalid dragon number. Check your party with %party.');
     }
 
-    const dragon = player.party[dragonIndex];
-    const fullDragonData = dragons.find(d => d.id === dragon.id);
+    const dragonToReRoll = player.party[dragonIndex];
+    const oldMoves = dragonToReRoll.moves.map(m => m.name).join(', ');
 
-    if (!fullDragonData) {
-        return reply('Could not find the full data for this dragon.');
-    }
-
-    const getRandomMoves = (moveset, count) => {
-        const shuffled = moveset.sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
-    };
-
-    const allMoves = fullDragonData.moveset || fullDragonData.moves;
-    dragon.moves = getRandomMoves(allMoves, 4);
+    dragonToReRoll.moves = getRandomMoves(dragonToReRoll, dragons);
     savePlayer();
 
-    await reply(`You have re-rolled the moves for your ${dragon.name}.`);
+    const newMoves = dragonToReRoll.moves.map(m => m.name).join(', ');
+
+    await reply(`${dragonToReRoll.name}'s moves have been re-rolled!\n\nOld: ${oldMoves}\nNew: ${newMoves}`);
   },
 };

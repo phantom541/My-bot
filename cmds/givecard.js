@@ -2,46 +2,45 @@ module.exports = {
   name: 'givecard',
   description: 'Give a card to another player.',
   async execute(context) {
-    const { args, msg, reply, player, getPlayer, updatePlayer } = context;
-    const source = args[0]?.toLowerCase();
+    const { args, msg, player, savePlayer, reply, getPlayer, updatePlayer } = context;
+
+    const location = args[0]?.toLowerCase();
     const cardIndex = parseInt(args[1]) - 1;
-    const recipientId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
 
-    if (!source || (source !== 'deck' && source !== 'holder')) {
-        return reply('Please specify the source: deck or holder.');
-    }
-    if (isNaN(cardIndex)) {
-        return reply('Invalid card index.');
-    }
-    if (!recipientId) {
-        return reply('You need to mention a user to give a card to.');
+    if (!location || (location !== 'deck' && location !== 'holder' && location !== 'unsorted') || isNaN(cardIndex) || !mentionedJid) {
+      return reply('Invalid usage. Use: `%givecard <deck|holder|unsorted> <card_number> @user`');
     }
 
-    const recipient = getPlayer(recipientId);
-    if (!recipient) return reply('Recipient not found.');
-
-    let cardToGive;
-    if (source === 'deck') {
-        if (cardIndex < 0 || cardIndex >= player.deck.length) {
-            return reply('Invalid deck index.');
-        }
-        [cardToGive] = player.deck.splice(cardIndex, 1);
-    } else { // holder
-        if (cardIndex < 0 || cardIndex >= player.holder.length) {
-            return reply('Invalid holder index.');
-        }
-        [cardToGive] = player.holder.splice(cardIndex, 1);
+    if (location === 'unsorted'){
+        location = 'pc';
     }
 
-    if (recipient.deck.length < 12) {
-        recipient.deck.push(cardToGive);
-    } else {
-        recipient.holder.push(cardToGive);
+    if (mentionedJid === player.id) {
+        return reply("You can't give a card to yourself.");
     }
 
-    updatePlayer(player);
+    const sourceCollection = player[location];
+
+    if (!sourceCollection || cardIndex < 0 || cardIndex >= sourceCollection.length) {
+      return reply(`Invalid card number. Check your ${location} with the %cards command.`);
+    }
+
+    const cardToGive = sourceCollection[cardIndex];
+
+    // Remove the card from the sender
+    sourceCollection.splice(cardIndex, 1);
+    savePlayer();
+
+    // Add the card to the recipient's collection
+    const recipient = getPlayer(mentionedJid);
+    if (!recipient.pc) {
+      recipient.pc = [];
+    }
+    recipient.pc.push(cardToGive);
     updatePlayer(recipient);
 
-    await reply(`You have given your ${cardToGive.name} card to ${recipient.name}.`);
+    const recipientName = recipient.name || mentionedJid.split('@')[0];
+    await reply(`You have given the "${cardToGive.name}" card to ${recipientName}.`);
   },
 };

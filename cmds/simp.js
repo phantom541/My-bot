@@ -3,13 +3,10 @@ module.exports = {
   description: 'Calculates how much of a simp a user is.',
   async execute(context) {
     const { msg, reply, getPlayer } = context;
-    const mentions = await msg.getMentions();
-    if (!mentions || mentions.length === 0) {
-        return reply('You need to mention a user.');
-    }
-    const targetContact = mentions[0];
-    const targetPlayer = getPlayer(targetContact.id._serialized);
+    const targetId = msg.message.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    if (!targetId) return reply('You need to mention a user.');
+    const targetPlayer = getPlayer(targetId);
     const simpRate = Math.floor(Math.random() * 101);
-    await reply(`@${targetContact.id.user} is ${simpRate}% a simp.`, { mentions: [targetContact] });
+    await reply(`${targetPlayer.name} is ${simpRate}% a simp.`);
   },
 };

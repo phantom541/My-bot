@@ -1,19 +1,22 @@
 module.exports = {
   name: 'unban',
-  description: 'Unbans a user from using the bot.',
+  description: 'Unban a user from the bot.',
   async execute(context) {
-    const { hasRole, reply, msg, getPlayer, updatePlayer } = context;
-    if (!hasRole('mod')) return reply('You do not have permission to use this command.');
+    const { msg, reply, hasRole, getPlayer, updatePlayer } = context;
 
-    const mentions = await msg.getMentions();
-    if (!mentions || mentions.length === 0) {
-        return reply('You need to mention a user to unban.');
+    if (!hasRole('mod')) {
+        return reply("You do not have permission to use this command.");
     }
-    const targetContact = mentions[0];
-    const targetPlayer = getPlayer(targetContact.id._serialized);
 
-    targetPlayer.banned = false;
-    updatePlayer(targetPlayer);
-    await reply(`@${targetContact.id.user} has been unbanned.`, { mentions: [targetContact] });
+    const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    if (!mentionedJid) {
+      return reply('Please mention a user to unban.');
+    }
+
+    const playerToUnban = getPlayer(mentionedJid);
+    playerToUnban.banned = false;
+    updatePlayer(playerToUnban);
+
+    await reply(`User ${mentionedJid.split('@')[0]} has been unbanned.`);
   },
 };

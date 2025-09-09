@@ -2,27 +2,39 @@ module.exports = {
   name: 'claim',
   description: 'Claims a spawned card.',
   async execute(context) {
-    const { activeCardSpawns, from, reply, player, CARD_CLAIM_COST, savePlayer } = context;
-    const card = activeCardSpawns[from];
-    if (!card) {
-        return reply('There is no card to claim.');
+    const { from, player, savePlayer, reply, activeCardSpawns, CARD_CLAIM_COST } = context;
+
+    const cardToClaim = activeCardSpawns[from];
+
+    if (!cardToClaim) {
+      return reply('There is no card to claim right now.');
     }
 
     if (player.gold < CARD_CLAIM_COST) {
-        return reply(`You need ${CARD_CLAIM_COST} gold to claim this card. You only have ${player.gold}.`);
+      return reply(`You need ${CARD_CLAIM_COST} gold to claim this card, but you only have ${player.gold}.`);
     }
 
+    // Deduct cost
     player.gold -= CARD_CLAIM_COST;
 
-    if (player.deck.length < 12) {
-        player.deck.push(card);
-        await reply(`You spent ${CARD_CLAIM_COST} gold and claimed the ${card.name} card! It has been added to your deck.`);
-    } else {
-        player.holder.push(card);
-        await reply(`You spent ${CARD_CLAIM_COST} gold and claimed the ${card.name} card! Your deck is full, so it has been sent to your card holder.`);
+    // Add card to player's collection (pc = player collection)
+    if (!player.pc) {
+      player.pc = [];
     }
+    player.pc.push({
+      id: cardToClaim.id,
+      name: cardToClaim.name,
+      tier: cardToClaim.tier,
+      source: cardToClaim.source,
+      imageUrl: cardToClaim.imageUrl,
+    });
 
-    savePlayer();
+    // Remove the active spawn so it can't be claimed again
     delete activeCardSpawns[from];
+
+    // Save the updated player data
+    savePlayer();
+
+    await reply(`Congratulations! You have successfully claimed the "${cardToClaim.name}" card for ${CARD_CLAIM_COST} gold.`);
   },
 };

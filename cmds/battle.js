@@ -38,8 +38,6 @@ module.exports = {
         const battleImageUrl = await generateBattleImage(playerDragon, opponentDragon, environment);
         if (battleImageUrl) {
             try {
-                // Assuming axios is available on context, which it is not.
-                // I will add it.
                 const axios = require('axios');
                 const imageResponse = await axios.get(battleImageUrl, { responseType: 'arraybuffer' });
                 const imageBuffer = Buffer.from(imageResponse.data, 'binary');

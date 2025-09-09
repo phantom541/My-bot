@@ -4,55 +4,53 @@ module.exports = {
   name: 'spawncard',
   description: 'Spawns a random card.',
   async execute(context) {
-    const { activeCardSpawns, from, reply, GIPHY_API_KEY, sock, msg } = context;
+    const { sock, from, reply, hasRole, activeCardSpawns, CARD_CLAIM_COST } = context;
+
+    // In the original help, this was a mod command.
+    if (!hasRole('mod')) {
+        return reply('You do not have permission to use this command.');
+    }
+
     if (activeCardSpawns[from]) {
-        return reply('A card has already been spawned. Use %claim to get it.');
+        return reply('There is already an active card spawn in this chat. Use %claim to get it!');
     }
 
     try {
-        let cardToSpawn;
-        const spawnType = Math.random() < 0.5 ? 'dragon_card' : 'anime_gif';
+        const response = await axios.get('https://aurora-api-ten.vercel.app/card/random');
+        const cardData = response.data;
 
-        if (spawnType === 'dragon_card') {
-            const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
-            const dragonCards = response.data.data;
-            const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
-
-            cardToSpawn = {
-                name: randomDragonCard.name,
-                tier: 'Dragon',
-                imageUrl: randomDragonCard.card_images[0].image_url,
-                type: 'dragon_card'
-            };
-        } else { // anime_gif
-            const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
-            const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-            const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
-            const gifs = response.data.data;
-            const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-
-            cardToSpawn = {
-                name: randomGif.title || 'Anime GIF',
-                tier: 'Anime',
-                imageUrl: randomGif.images.original.url.split('?')[0],
-                type: 'anime_gif'
-            };
-        }
-
-        activeCardSpawns[from] = cardToSpawn;
-
-        const imageResponse = await axios.get(cardToSpawn.imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+        // Store the card details for the claim command
+        activeCardSpawns[from] = {
+            id: cardData.id,
+            name: cardData.title,
+            tier: cardData.tier,
+            source: cardData.source,
+            imageUrl: cardData.image,
+            spawnTime: Date.now(),
+        };
 
         let caption = `A wild card has appeared!\n\n`;
-        caption += `*${cardToSpawn.name}* (Tier: ${cardToSpawn.tier})\n\n`;
-        caption += `Use \`%claim\` to add it to your collection!`;
+        caption += `*${cardData.title}*\n`;
+        caption += `Source: ${cardData.source}\n`;
+        caption += `Tier: ${cardData.tier}\n\n`;
+        caption += `Use \`%claim\` to add it to your collection! It costs ${CARD_CLAIM_COST} gold.`;
 
-        await sock.sendMessage(from, { image: imageBuffer, caption: caption }, { quoted: msg });
+        await sock.sendMessage(from, {
+            image: { url: cardData.image },
+            caption: caption,
+        });
+
+        // Set a timeout for the card to disappear (5 minutes)
+        setTimeout(() => {
+            if (activeCardSpawns[from] && activeCardSpawns[from].id === cardData.id) {
+                delete activeCardSpawns[from];
+                sock.sendMessage(from, { text: `The card "${cardData.title}" was not claimed and has disappeared.` });
+            }
+        }, 5 * 60 * 1000);
 
     } catch (error) {
-        console.error('Error fetching or sending card:', error);
-        await reply('Sorry, I could not spawn a card at this time. Please try again later.');
+        console.error('Error spawning card:', error);
+        reply('There was an error trying to spawn a card.');
     }
   },
 };

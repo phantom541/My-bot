@@ -7,13 +7,16 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^0.27.2",
+    "axios": "^1.11.0",
+    "baileys": "^6.7.19",
+    "pino": "^9.6",
     "cloudinary": "^2.7.0",
-    "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.34.0",
     "ytdlp-nodejs": "^2.3.4"
   },
   "devDependencies": {
     "eslint": "^9.34.0"
+  },
+  "overrides": {
+    "color": "^5.0.0"
   }
 }

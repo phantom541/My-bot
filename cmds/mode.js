@@ -1,15 +1,20 @@
 module.exports = {
   name: 'mode',
-  description: 'Sets the bot mode to public or private.',
+  description: 'Set the bot mode.',
   async execute(context) {
-    const { hasRole, reply, args, botSettings } = context;
-    if (!hasRole('owner')) return reply('You do not have permission to use this command.');
-    const mode = args[0]?.toLowerCase();
-    if (mode === 'public' || mode === 'private') {
-        botSettings.mode = mode;
-        await reply(`Bot mode set to ${mode}.`);
-    } else {
-        await reply('Usage: %mode <public/private>');
+    const { args, reply, hasRole, botSettings } = context;
+
+    if (!hasRole('owner')) {
+      return reply('You do not have permission to use this command.');
     }
+
+    const newMode = args[0]?.toLowerCase();
+    if (newMode !== 'public' && newMode !== 'private') {
+      return reply('Invalid mode. Use `%mode public` or `%mode private`.');
+    }
+
+    botSettings.mode = newMode;
+
+    await reply(`Bot mode has been set to ${newMode}.`);
   },
 };

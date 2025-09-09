@@ -1,6 +1,6 @@
 module.exports = {
-  name: 'addpower',
-  description: 'Add a power user.',
+  name: 'addsudo',
+  description: 'Promote a user to mod.',
   async execute(context) {
     const { msg, reply, hasRole, getPlayer, updatePlayer } = context;
 
@@ -10,7 +10,7 @@ module.exports = {
 
     const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
     if (!mentionedJid) {
-      return reply('Please mention a user to add as a power user.');
+      return reply('Please mention a user to promote.');
     }
 
     const playerToPromote = getPlayer(mentionedJid);
@@ -18,14 +18,14 @@ module.exports = {
       playerToPromote.roles = [];
     }
 
-    if (playerToPromote.roles.includes('power')) {
-      return reply('This user is already a power user.');
+    if (playerToPromote.roles.includes('mod')) {
+      return reply('This user is already a mod.');
     }
 
-    playerToPromote.roles.push('power');
+    playerToPromote.roles.push('mod');
     updatePlayer(playerToPromote);
 
     const targetName = playerToPromote.name || mentionedJid.split('@')[0];
-    await reply(`${targetName} has been added as a power user.`);
+    await reply(`${targetName} has been promoted to a bot moderator.`);
   },
 };

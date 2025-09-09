@@ -1,24 +1,19 @@
-const { MessageMedia } = require('whatsapp-web.js');
-
 module.exports = {
   name: 'setpp',
   description: 'Sets the bot\'s profile picture.',
   async execute(context) {
-    const { hasRole, reply, msg, client } = context;
+    const { hasRole, reply, msg, downloadContentFromMessage, sock } = context;
     if (!hasRole('owner')) return reply('You do not have permission to use this command.');
-
-    if (!msg.hasQuotedMsg) {
+    if (!msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
         return reply('Please reply to an image to set it as the profile picture.');
     }
-
-    const quotedMsg = await msg.getQuotedMessage();
-    if (!quotedMsg.hasMedia || !quotedMsg.type === 'image') {
-        return reply('The replied message is not an image.');
-    }
-
     try {
-        const media = await quotedMsg.downloadMedia();
-        await client.setProfilePicture(media);
+        const stream = await downloadContentFromMessage(msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage, 'image');
+        let buffer = Buffer.from([]);
+        for await(const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        await sock.updateProfilePicture(sock.user.id, buffer);
         await reply('Profile picture updated.');
     } catch (error) {
         console.error('Error setting profile picture:', error);
