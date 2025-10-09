@@ -23,6 +23,7 @@ const { MONSTERS: monsters } = require('./monsters.js');
 const beasts = require('./beastData.js');
 const cloudinary = require('cloudinary').v2;
 const http = require('http');
+const { spawnCard } = require('./card-spawner.js');
 
 // Simple HTTP server for Replit workflow compatibility
 const server = http.createServer((req, res) => {
@@ -48,6 +49,9 @@ cloudinary.config({
 // Bot Configuration - Using environment variables
 const OWNER_NAME = process.env.BOT_OWNER_NAME || 'Bot Owner';
 const OWNER_NUMBER = process.env.BOT_OWNER_NUMBER;
+if (!OWNER_NUMBER) {
+    console.log('[WARNING] BOT_OWNER_NUMBER is not set in your .env file. Owner-specific commands will not work.');
+}
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const CARD_CLAIM_COST = parseInt(process.env.CARD_CLAIM_COST) || 100;
 const CARD_PACK_COST = parseInt(process.env.CARD_PACK_COST) || 300;
@@ -474,13 +478,15 @@ async function main() {
     if (player.banned) return;
 
     // Normalize both sender and owner numbers to handle both JID and LID formats
-    const ownerId = OWNER_NUMBER.split('@')[0];
-    const senderId = sender.split('@')[0];
+    if (OWNER_NUMBER) {
+        const ownerId = OWNER_NUMBER.split('@')[0];
+        const senderId = sender.split('@')[0];
 
-    if (senderId === ownerId && !player.roles.includes('owner')) {
-        player.roles.push('owner');
-        savePlayer();
-        await reply(`Welcome, owner! You have been granted owner role.`);
+        if (senderId === ownerId && !player.roles.includes('owner')) {
+            player.roles.push('owner');
+            savePlayer();
+            await reply(`Welcome, owner! You have been granted owner role.`);
+        }
     }
 
     const command = sock.commands.get(commandName);
@@ -555,42 +561,16 @@ async function main() {
     for (const groupId in allGroupSettings) {
         if (allGroupSettings[groupId].wildcard && !activeCardSpawns[groupId]) {
             try {
-                let cardToSpawn;
-                const spawnType = Math.random() < 0.5 ? 'dragon_card' : 'anime_gif';
-
-                if (spawnType === 'dragon_card') {
-                    const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
-                    const dragonCards = response.data.data;
-                    const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
-                    cardToSpawn = { name: randomDragonCard.name, tier: 'Dragon', imageUrl: randomDragonCard.card_images[0].image_url, type: 'dragon_card' };
-                } else {
-                    const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
-                    const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-                    const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
-                    const gifs = response.data.data;
-                    const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-                    cardToSpawn = { name: randomGif.title || 'Anime GIF', tier: 'Anime', imageUrl: randomGif.images.original.url.split('?')[0], type: 'anime_gif' };
-                }
-
-                activeCardSpawns[groupId] = cardToSpawn;
-
-                const imageResponse = await axios.get(cardToSpawn.imageUrl, { responseType: 'arraybuffer' });
-                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-
-                let caption = `A wild card has appeared!\n\n`;
-                caption += `*${cardToSpawn.name}* (Tier: ${cardToSpawn.tier})\n\n`;
-                caption += `Use \`%claim\` to add it to your collection! It costs 100 gold.`;
-
-                await sock.sendMessage(groupId, { image: imageBuffer, caption: caption });
-
-                // Card disappears after 5 minutes
-                setTimeout(() => {
-                    if (activeCardSpawns[groupId] && activeCardSpawns[groupId].name === cardToSpawn.name) {
-                        delete activeCardSpawns[groupId];
-                        sock.sendMessage(groupId, { text: `The card "${cardToSpawn.name}" was not claimed and has disappeared.` });
-                    }
-                }, 5 * 60 * 1000);
-
+                // The new spawner needs a context object.
+                const context = {
+                    sock,
+                    from: groupId,
+                    activeCardSpawns,
+                    CARD_CLAIM_COST,
+                    // We don't have a specific message or player for an auto-spawn
+                    // but the spawner function is designed to handle this.
+                };
+                await spawnCard(context);
             } catch (error) {
                 console.error(`Error auto-spawning card in group ${groupId}:`, error);
             }

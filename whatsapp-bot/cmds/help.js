@@ -1,148 +1,122 @@
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+
 module.exports = {
   name: 'help',
   aliases: ['menu'],
-  description: 'Displays the list of all available commands.',
+  description: 'Displays a visually appealing list of all available commands.',
   async execute(context) {
-    const { reply, OWNER_NAME } = context;
-    await reply(`
-*Dragon Bot Commands*
+    const { sock, from, reply, OWNER_NAME, GIPHY_API_KEY, PREFIX } = context;
 
-*General:*
-%start-hunt - Start your adventure and choose a dragon.
-%guide <command> - Get a detailed guide for a command.
-%profile [@user] - View your or another user's profile.
-%leaderboard - View the richest players.
-%nickname <dragon_index> <new_name> - Give your dragon a nickname.
-%mods - View the list of bot moderators.
-%daily - Get a daily reward.
-%quests - View and complete quests.
-%dex <dragon_name_or_id> - View DragonDex information.
-%craft <item_name> - Craft new items.
-%map - View the world map.
-%achievements - View your achievements.
+    if (!GIPHY_API_KEY) {
+        console.error("GIPHY_API_KEY is not configured. Cannot fetch image for help menu.");
+        // Fallback to a simple text menu if the API key is missing
+        return reply("Welcome to the Dragon Bot! Use commands with the prefix '%' (e.g., %profile). For a full command list, please ask the bot owner to configure the Giphy API key.");
+    }
 
-*Economy:*
-%balance - Check gold & bank
-%deposit <amount> - Deposit gold
-%withdraw <amount> - Withdraw gold
-%mart - View items to buy
-%buy <item> - Buy items from the shop.
-%slot <amount> - Gamble gold (max 1,000,000 at once)
-%market - Access the player market.
+    let mediaBuffer;
+    let mediaType = 'image';
+    let isGif = false;
 
-*Dragons:*
-%spawn - Spawn a wild dragon (5m cooldown, 1m exclusive catch).
-%catch <tool> - Catch the spawned wild dragon
-%party - View your active dragons (max 6)
-%den - View your dragon den (storage)
-%sendtoden <dragon_index> - Move a party dragon to den
-%sendtoparty <den_index> - Move a den dragon to party (max 6)
-%dragon <name_or_id> - View dragon summary
+    try {
+        const response = await axios.get(`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=anime&rating=pg-13`);
+        const imageUrl = response.data.data.images.original.url;
 
-*Training & Battles:*
-%train - Train your dragons (cooldown 15m)
-%attack - Attack a spawned wild dragon
-%battle @user - Challenge another player
-%battle fight <1-4> - Use a move in battle
-%remove <move_name> - Remove a move from your dragon to learn a new one.
-%dungeon - Enter a dungeon.
-%boss - Fight the global boss.
+        isGif = imageUrl.endsWith('.gif');
+        mediaType = isGif ? 'video' : 'image';
 
-*Dungeons:*
-%dungeons - View available dungeons.
-%spawn-dungeon <name> - Spawn a dungeon (Admin only).
-%enter-dungeon - Enter the active dungeon.
-%dungeon start - Start the dungeon crawl (Party leader only).
+        const bufferResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        mediaBuffer = Buffer.from(bufferResponse.data, 'binary');
 
-*Colossal Beasts:*
-%beasts - List the Colossal Beasts.
-%activate-scenario <name> - Spawn a Colossal Beast (Admin only).
-%challenge-beast - Fight the active Colossal Beast.
+    } catch (error) {
+        console.error("Failed to fetch image for help menu:", error);
+        // Fallback to a text-only menu if the image fetch fails
+        return reply("The menu is currently unavailable. Please try again later.");
+    }
 
-*Tournaments:*
-%tournament create <name> - Create a new tournament.
-%tournament join - Join the active tournament.
-%tournament start - Start the tournament (organizer only).
-%tournament reportwin - Report your win in a tournament match.
+    const ravenLogoPath = path.join(__dirname, '..', 'assets', 'ravenlogo.png');
+    let thumbnail;
+    try {
+        const thumbRaw = fs.readFileSync(ravenLogoPath);
+        if (thumbRaw.length > 0) {
+             thumbnail = await sharp(thumbRaw).resize(100, 100).png().toBuffer();
+        } else {
+            thumbnail = null;
+        }
+    } catch(e) {
+        console.error("Could not read or process logo for help menu, skipping thumbnail.", e);
+        thumbnail = null;
+    }
 
-*Guilds:*
-%guilds - List all guilds.
-%guild create <name> - Create a new guild (costs 10000 gold).
-%guild join <name> - Request to join a guild.
-%guild info [name] - View info about your guild or another.
-%guild accept @user - Accept a user's request to join (Master only).
-%guild manage <promote|demote|kick> @user - Manage guild members (Leaders only).
-%guild slogan <new_slogan> - Change your guild's slogan (Master only).
-%guild deposit <amount> - Deposit gold into the guild treasury.
-%guild withdraw <amount> - Withdraw gold from the treasury (Master only).
+    const helpText = `
+🐲 *DRAGON BOT MENU* 🐲
 
-*Gifting & Trading:*
-%givedragon <dragon_index> @user - Give a dragon to another player.
-%trade @user <your_dragon_index> <their_dragon_index> - Propose a trade.
-%trade accept - Accept a trade proposal.
-%trade decline - Decline a trade proposal.
+Hello! I'm your friendly Dragon Bot, here to bring adventure to your chat!
+Owner: *${OWNER_NAME}*
 
-*Fun Commands:*
-%compliment @user
-%insult @user
-%flirt
-%shayari
-%goodnight
-%roseday
-%character @user
-%wasted @user
-%ship @user
-%simp @user
-%stupid @user [text]
+Here's a quick look at what I can do (prefix: \`${PREFIX}\`):
 
-*Card Collecting:*
-%spawncard [--tier=<tier>] - Spawn a random card (optionally of a specific tier, mods only).
-%claim - Claim a spawned card (costs 100 gold).
-%buypack - Buy a pack of 3 random cards for 300 gold.
-%cards - View your card collection (deck and holder).
-%spawnpack6 - Spawn a 6-card pack with guaranteed high-tier cards.
-%spawnpack7 - Spawn a 7-card pack with one card from each tier.
-%claimpack - Claim a spawned card pack.
-%movetodeck <holder_index> - Move a card from your holder to your deck.
-%movetoholder <deck_index> - Move a card from your deck to your holder.
-%givecard <deck|holder> <card_index> @user - Give a card to another player.
+🐉 *Core Commands*
+ • *start-hunt*: Begin your journey.
+ • *profile*: View your player profile.
+ • *daily*: Claim your daily reward.
+ • *leaderboard*: See who's on top.
+ • *guide <cmd>*: Get details on a command.
 
-*Admin:*
-%ban @user - Ban a user from using the bot.
-%unban @user - Unban a user.
-%kick @user - Kick a user from the group.
-%wild on/off - Enable/disable wild spawns (mods only)
-%huntdragon <Dragon Name> <Level> - Spawn a specific high-level dragon.
-%givegold @user <amount> - Give gold to user (owner only)
-%re-roll <dragon_index> - Re-roll a dragon's moves (owner/mod only).
-%environments - View the list of battle environments.
+⚔️ *Dragon & Battle*
+ • *spawn*: Find a wild dragon.
+ • *catch <tool>*: Catch a spawned dragon.
+ • *party* / *den*: Manage your dragons.
+ • *train*: Level up your dragons.
+ • *attack*: Battle a wild dragon.
+ • *battle <@user>*: Challenge a friend.
 
-*Owner:*
-%addsudo @user - Promote a user to mod.
-%delsudo @user - Demote a mod.
-%addpower @user - Add a power user.
-%delpower @user - Remove a power user.
-%mode <public/private> - Set the bot mode.
-%clearsession - Clear the bot's session file.
-%setpp <reply to image> - Set the bot's profile picture.
-%autotyping <on/off> - Enable or disable auto typing.
-%autoread <on/off> - Enable or disable auto read.
-%antidelete <on/off> - Enable or disable anti-delete.
-%autoreact <on/off> - Enable or disable auto-react.
+🃏 *Card Collecting*
+ • *spawncard*: Spawn a collectible card (Mod).
+ • *claim*: Claim the spawned card.
+ • *cards*: View your collection.
+ • *buypack*: Get a random pack of cards.
 
-*Group Admin (Bot must be admin):*
-%modes <feature> <on|off> - Enable or disable features for this group.
-%open - Open the group for all members to send messages.
-%close - Close the group for only admins to send messages.
+🏛️ *Guilds*
+ • *guild create <name>*: Start your own guild.
+ • *guild join <name>*: Join a guild.
+ • *guild info*: Check guild status.
 
-*Downloader:*
-%play <song_name> - Play a song from YouTube.
-%youtube <mp3/mp4> <url> - Download from YouTube.
-%instagram <url> - Download from Instagram.
-%facebook <url> - Download from Facebook.
-%tiktok <url> - Download from TikTok.
+💰 *Economy*
+ • *balance*: Check your gold.
+ • *mart*: See items for sale.
+ • *buy <item>*: Purchase an item.
 
-Owner: ${OWNER_NAME}
-        `);
+🎉 *Fun & Social*
+ • *compliment*, *insult*, *flirt*, *ship*
+
+🎵 *Downloader*
+ • *play <song>*: Play music from YouTube.
+
+...and many more! Use \`${PREFIX}guide <command>\` for more details on any command.
+    `;
+
+    try {
+        await sock.sendMessage(from, {
+            [mediaType]: mediaBuffer,
+            caption: helpText,
+            ...(isGif ? { gifPlayback: true } : {}),
+            contextInfo: thumbnail ? {
+                externalAdReply: {
+                    title: `🐉 ${OWNER_NAME}'s Dragon Bot 🐉`,
+                    body: `Type ${PREFIX}guide for more info!`,
+                    thumbnail,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
+                }
+            } : undefined
+        });
+    } catch (sendError) {
+        console.error("Failed to send help menu with media:", sendError);
+        // If sending with media fails, send the text part as a fallback
+        reply(helpText);
+    }
   },
 };

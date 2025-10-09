@@ -1,55 +1,26 @@
-const axios = require('axios');
+const { spawnCard } = require('../card-spawner');
 
 module.exports = {
   name: 'spawncard',
-  description: 'Spawns a random card.',
+  description: 'Spawns a random card with advanced features.',
   async execute(context) {
-    const { sock, from, reply, hasRole, activeCardSpawns, CARD_CLAIM_COST } = context;
+    const { reply, hasRole, activeCardSpawns, from } = context;
 
-    // In the original help, this was a mod command.
+    // Ensure the command can only be used by moderators or owners
     if (!hasRole('mod')) {
         return reply('You do not have permission to use this command.');
     }
 
+    // Check if there's already a card waiting to be claimed in the chat
     if (activeCardSpawns[from]) {
-        return reply('There is already an active card spawn in this chat. Use %claim to get it!');
+        return reply('There is already an active card spawn in this chat. Use `%claim` to get it!');
     }
 
     try {
-        const response = await axios.get('https://aurora-api-ten.vercel.app/card/random');
-        const cardData = response.data;
-
-        // Store the card details for the claim command
-        activeCardSpawns[from] = {
-            id: cardData.id,
-            name: cardData.title,
-            tier: cardData.tier,
-            source: cardData.source,
-            imageUrl: cardData.image,
-            spawnTime: Date.now(),
-        };
-
-        let caption = `A wild card has appeared!\n\n`;
-        caption += `*${cardData.title}*\n`;
-        caption += `Source: ${cardData.source}\n`;
-        caption += `Tier: ${cardData.tier}\n\n`;
-        caption += `Use \`%claim\` to add it to your collection! It costs ${CARD_CLAIM_COST} gold.`;
-
-        await sock.sendMessage(from, {
-            image: { url: cardData.image },
-            caption: caption,
-        });
-
-        // Set a timeout for the card to disappear (5 minutes)
-        setTimeout(() => {
-            if (activeCardSpawns[from] && activeCardSpawns[from].id === cardData.id) {
-                delete activeCardSpawns[from];
-                sock.sendMessage(from, { text: `The card "${cardData.title}" was not claimed and has disappeared.` });
-            }
-        }, 5 * 60 * 1000);
-
+        // Call the new, centralized spawnCard function
+        await spawnCard(context);
     } catch (error) {
-        console.error('Error spawning card:', error);
+        console.error('Error executing spawncard command:', error);
         reply('There was an error trying to spawn a card.');
     }
   },
