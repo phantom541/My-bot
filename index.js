@@ -47,7 +47,6 @@ cloudinary.config({
 });
 
 // Bot Configuration - Using environment variables
-const OWNER_NAME = process.env.BOT_OWNER_NAME || 'Bot Owner';
 const OWNER_NUMBER = process.env.BOT_OWNER_NUMBER;
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const CARD_CLAIM_COST = parseInt(process.env.CARD_CLAIM_COST) || 100;
@@ -535,7 +534,7 @@ async function main() {
         activeCardPacks, activeTournaments, activeDungeons, activeBeast,
         dragons, cards, shop, beasts, monsters, dungeonTiers,
         // Constants
-        OWNER_NAME, OWNER_NUMBER, GIPHY_API_KEY, CARD_CLAIM_COST, CARD_PACK_COST, CARD_PACK_SIZE,
+        OWNER_NUMBER, GIPHY_API_KEY, CARD_CLAIM_COST, CARD_PACK_COST, CARD_PACK_SIZE,
         GUILD_CREATE_COST, UNSPLASH_ACCESS_KEY, GUILD_TIERS, PREFIX, STARTER_DRAGON_IDS,
         rolesHierarchy, cooldowns, MAX_LEVEL, XP_PER_LEVEL, XP_GAIN_MULTIPLIER, PLAYER_XP_GAIN,
         RANKS, typeEffectiveness, COMPLIMENTS, INSULTS, FLIRT_LINES, SHAYARI, wildSpawnsEnabled,
