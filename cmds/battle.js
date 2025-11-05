@@ -38,10 +38,7 @@ module.exports = {
         const battleImageUrl = await generateBattleImage(playerDragon, opponentDragon, environment);
         if (battleImageUrl) {
             try {
-                const axios = require('axios');
-                const imageResponse = await axios.get(battleImageUrl, { responseType: 'arraybuffer' });
-                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-                await sock.sendMessage(from, { image: imageBuffer, caption: `*A battle begins in the ${environment.name}!*` }, { quoted: msg });
+                await sock.sendMessage(from, { image: { url: battleImageUrl }, caption: `*A battle begins in the ${environment.name}!*` }, { quoted: msg });
             } catch (imgError) {
                 console.error("Failed to send generated battle image:", imgError);
                 await reply(`*A battle begins in the ${environment.name}!* (Image generation failed)`);
@@ -238,7 +235,15 @@ module.exports = {
             }
 
             battle.turn = opponentPlayerKey;
-            battleReport += `It's ${battle[opponentPlayerKey].player.name}'s turn! Use \`%battle fight <1-4>\` to attack.`;
+            battleReport += `\n*It's now ${battle[opponentPlayerKey].player.name}'s turn!*`;
+
+            const opponentDragon = battle[opponentPlayerKey].dragon;
+            let moveMenu = "\n\n*Choose your move:*\n";
+            opponentDragon.moves.forEach((move, i) => {
+                moveMenu += `${i + 1}. ${move.name} (DMG: ${move.damage}, Type: ${move.type})\n`;
+            });
+            moveMenu += "\nUse `%battle fight <number>` to attack.";
+            battleReport += moveMenu;
 
             if (battle.isBeastBattle && battle.opponentDragon.passive === 'Dark Aura') {
                 const drain = Math.floor(battle.playerDragon.hp * 0.05);

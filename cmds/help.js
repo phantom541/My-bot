@@ -3,146 +3,216 @@ module.exports = {
   aliases: ['menu'],
   description: 'Displays the list of all available commands.',
   async execute(context) {
-    const { reply, OWNER_NAME } = context;
-    await reply(`
-*Dragon Bot Commands*
+    const { reply } = context;
+    await reply(`*🐉⛓️ 𝙳𝚁Δ𝙶Ø₦ ₣𝙰𝙻𝙻 ⱣⱧΔ₥ŦØ₥ 𝙲𝙾𝙽𝚂𝙾𝙻𝙴 ⛓️🐉*
+\`\`\`
+╔═══◇══════◇═══╗
+   🅓🅡🅐🅖🅞🅝   𝙲𝙾𝙼𝙼𝙰𝙽𝙳 𝙲𝙾𝙽𝚃𝚁𝙾𝙻
+╚═══◇══════◇═══╝
 
-*General:*
-%start-hunt - Start your adventure and choose a dragon.
-%guide <command> - Get a detailed guide for a command.
-%profile [@user] - View your or another user's profile.
-%leaderboard - View the richest players.
-%nickname <dragon_index> <new_name> - Give your dragon a nickname.
-%mods - View the list of bot moderators.
-%daily - Get a daily reward.
-%quests - View and complete quests.
-%dex <dragon_name_or_id> - View DragonDex information.
-%craft <item_name> - Craft new items.
-%map - View the world map.
-%achievements - View your achievements.
+👁‍🗨 ⧫ Welcome, Dragonbound Phantom.
+⚙️ SYSTEM STATUS: 🔥 Active | ⚡ CODE: DRAKON-PHANTOM
+🕶 Motto: “𝘛𝘩𝘦 𝘧𝘪𝘳𝘦 𝘪𝘴 𝘯𝘰𝘵 𝘵𝘰 𝘣𝘦 𝘧𝘦𝘢𝘳𝘦𝘥—𝘪𝘵 𝘪𝘴 𝘵𝘰 𝘣𝘦 𝘸𝘦𝘪𝘭𝘥𝘦𝘥.”
+🔮 CORE THEME: Elemental Warfare / Glitched Mythos
 
-*Economy:*
-%balance - Check gold & bank
-%deposit <amount> - Deposit gold
-%withdraw <amount> - Withdraw gold
-%mart - View items to buy
-%buy <item> - Buy items from the shop.
-%slot <amount> - Gamble gold (max 1,000,000 at once)
-%market - Access the player market.
+═══▰▰▰▰▰▰▰▰═══
+\`\`\`
 
-*Dragons:*
-%spawn - Spawn a wild dragon (5m cooldown, 1m exclusive catch).
-%catch <tool> - Catch the spawned wild dragon
-%party - View your active dragons (max 6)
-%den - View your dragon den (storage)
-%sendtoden <dragon_index> - Move a party dragon to den
-%sendtoparty <den_index> - Move a den dragon to party (max 6)
-%dragon <name_or_id> - View dragon summary
+---
 
-*Training & Battles:*
-%train - Train your dragons (cooldown 15m)
-%attack - Attack a spawned wild dragon
-%battle @user - Challenge another player
-%battle fight <1-4> - Use a move in battle
-%remove <move_name> - Remove a move from your dragon to learn a new one.
-%dungeon - Enter a dungeon.
-%boss - Fight the global boss.
+*🧩 General Protocols*
+\`\`\`
+%start-hunt          → Initiate your dragonbound saga.
+%guide <cmd>         → Decrypt command intel.
+%profile [@user]     → Scan user profile.
+%leaderboard         → Access wealth hierarchy.
+%nickname <id> <name>→ Rename your beast.
+%mods                → Reveal Phantom Moderators.
+%daily               → Claim daily infusion.
+%quests              → Activate questline.
+%dex <name|id>       → DragonDex access node.
+%craft <item>        → Forge item from ether.
+%map                 → Load world grid.
+%achievements        → Display legacy markers.
+\`\`\`
 
-*Dungeons:*
-%dungeons - View available dungeons.
-%spawn-dungeon <name> - Spawn a dungeon (Admin only).
-%enter-dungeon - Enter the active dungeon.
-%dungeon start - Start the dungeon crawl (Party leader only).
+---
 
-*Colossal Beasts:*
-%beasts - List the Colossal Beasts.
-%activate-scenario <name> - Spawn a Colossal Beast (Admin only).
-%challenge-beast - Fight the active Colossal Beast.
+*💰 Economy Engine*
+\`\`\`
+%balance             → Scan gold & vault.
+%deposit <amt>       → Transfer to vault.
+%withdraw <amt>      → Extract from vault.
+%mart                → Open item bazaar.
+%buy <item>          → Acquire from shop.
+%slot <amt>          → Gamble in the glitch.
+%market              → Enter player exchange.
+\`\`\`
 
-*Tournaments:*
-%tournament create <name> - Create a new tournament.
-%tournament join - Join the active tournament.
-%tournament start - Start the tournament (organizer only).
-%tournament reportwin - Report your win in a tournament match.
+---
 
-*Guilds:*
-%guilds - List all guilds.
-%guild create <name> - Create a new guild (costs 10000 gold).
-%guild join <name> - Request to join a guild.
-%guild info [name] - View info about your guild or another.
-%guild accept @user - Accept a user's request to join (Master only).
-%guild manage <promote|demote|kick> @user - Manage guild members (Leaders only).
-%guild slogan <new_slogan> - Change your guild's slogan (Master only).
-%guild deposit <amount> - Deposit gold into the guild treasury.
-%guild withdraw <amount> - Withdraw gold from the treasury (Master only).
+*🐲 Dragon Management*
+\`\`\`
+%spawn               → Summon wild entity.
+%catch <tool>        → Attempt capture.
+%party               → View active squad.
+%den                 → Access dragon vault.
+%sendtoden <id>      → Transfer to vault.
+%sendtoparty <id>    → Deploy to squad.
+%dragon <name|id>    → Scan dragon data.
+\`\`\`
 
-*Gifting & Trading:*
-%givedragon <dragon_index> @user - Give a dragon to another player.
-%trade @user <your_dragon_index> <their_dragon_index> - Propose a trade.
-%trade accept - Accept a trade proposal.
-%trade decline - Decline a trade proposal.
+---
 
-*Fun Commands:*
-%compliment @user
-%insult @user
-%flirt
-%shayari
-%goodnight
-%roseday
-%character @user
-%wasted @user
-%ship @user
-%simp @user
-%stupid @user [text]
+*⚔️ Combat & Training*
+\`\`\`
+%train               → Initiate training protocol.
+%attack              → Engage wild entity.
+%battle @user        → Challenge rival.
+%battle fight <1-4>  → Execute combat move.
+%remove <move>       → Purge ability.
+%dungeon             → Enter cryptic zone.
+%boss                → Engage global entity.
+\`\`\`
 
-*Card Collecting:*
-%spawncard [--tier=<tier>] - Spawn a random card (optionally of a specific tier, mods only).
-%claim - Claim a spawned card (costs 100 gold).
-%buypack - Buy a pack of 3 random cards for 300 gold.
-%cards - View your card collection (deck and holder).
-%spawnpack6 - Spawn a 6-card pack with guaranteed high-tier cards.
-%spawnpack7 - Spawn a 7-card pack with one card from each tier.
-%claimpack - Claim a spawned card pack.
-%movetodeck <holder_index> - Move a card from your holder to your deck.
-%movetoholder <deck_index> - Move a card from your deck to your holder.
-%givecard <deck|holder> <card_index> @user - Give a card to another player.
+---
 
-*Admin:*
-%ban @user - Ban a user from using the bot.
-%unban @user - Unban a user.
-%kick @user - Kick a user from the group.
-%wild on/off - Enable/disable wild spawns (mods only)
-%huntdragon <Dragon Name> <Level> - Spawn a specific high-level dragon.
-%givegold @user <amount> - Give gold to user (owner only)
-%re-roll <dragon_index> - Re-roll a dragon's moves (owner/mod only).
-%environments - View the list of battle environments.
+*🏰 Dungeons & Beasts*
+\`\`\`
+%dungeons            → List cryptic zones.
+%spawn-dungeon <name>→ Admin summon.
+%enter-dungeon       → Enter active zone.
+%dungeon start       → Begin crawl (Leader only).
 
-*Owner:*
-%addsudo @user - Promote a user to mod.
-%delsudo @user - Demote a mod.
-%addpower @user - Add a power user.
-%delpower @user - Remove a power user.
-%mode <public/private> - Set the bot mode.
-%clearsession - Clear the bot's session file.
-%setpp <reply to image> - Set the bot's profile picture.
-%autotyping <on/off> - Enable or disable auto typing.
-%autoread <on/off> - Enable or disable auto read.
-%antidelete <on/off> - Enable or disable anti-delete.
-%autoreact <on/off> - Enable or disable auto-react.
+%beasts              → List Colossal Entities.
+%activate-scenario   → Admin summon beast.
+%challenge-beast     → Engage entity.
+\`\`\`
 
-*Group Admin (Bot must be admin):*
-%modes <feature> <on|off> - Enable or disable features for this group.
-%open - Open the group for all members to send messages.
-%close - Close the group for only admins to send messages.
+---
 
-*Downloader:*
-%play <song_name> - Play a song from YouTube.
-%youtube <mp3/mp4> <url> - Download from YouTube.
-%instagram <url> - Download from Instagram.
-%facebook <url> - Download from Facebook.
-%tiktok <url> - Download from TikTok.
+*🏆 Tournaments*
+\`\`\`
+%tournament create   → Forge battleground.
+%tournament join     → Enter arena.
+%tournament start    → Begin clash.
+%tournament reportwin→ Log victory.
+\`\`\`
 
-Owner: ${OWNER_NAME}
-        `);
+---
+
+*🛡️ Guild System*
+\`\`\`
+%guilds              → List factions.
+%guild create        → Forge guild (10K gold).
+%guild join          → Request entry.
+%guild info          → Scan guild data.
+%guild accept        → Approve recruit.
+%guild manage        → Promote/Demote/Kick.
+%guild slogan        → Update creed.
+%guild deposit       → Fund treasury.
+%guild withdraw      → Extract funds.
+\`\`\`
+
+---
+
+*🎁 Gifting & Trade*
+\`\`\`
+%givedragon          → Transfer beast.
+%trade               → Propose exchange.
+%trade accept        → Confirm deal.
+%trade decline       → Reject deal.
+\`\`\`
+
+---
+
+*🎭 Fun Protocols*
+\`\`\`
+%compliment          → Send praise.
+%insult              → Deliver roast.
+%flirt               → Engage charm protocol.
+%shayari             → Emit poetic burst.
+%goodnight           → Send night signal.
+%roseday             → Trigger rose event.
+%character           → Reveal persona.
+%wasted              → Apply glitch filter.
+%ship                → Link two users.
+%simp                → Mark devotion.
+%stupid              → Echo foolishness.
+\`\`\`
+
+---
+
+*🃏 Card System*
+\`\`\`
+%spawncard           → Generate card (mods only).
+%claim               → Acquire card (100 gold).
+%buypack             → Buy 3-card pack (300 gold).
+%cards               → View collection.
+%spawnpack6          → Spawn elite pack.
+%spawnpack7          → Spawn tiered pack.%claimpack           → Claim pack.
+%movetodeck          → Transfer to deck.
+%movetoholder        → Transfer to holder.
+%givecard            → Gift card to user.
+\`\`\`
+
+---
+
+### 🔐 *Admin Protocols*
+\`\`\`
+%ban                 → Lock user.
+%unban               → Unlock user.
+%kick                → Eject user.
+%wild on/off         → Toggle wild spawns.
+%huntdragon          → Spawn elite dragon.
+%givegold            → Transfer gold.
+%re-roll             → Reset dragon moves.
+%environments        → List battle zones.
+\`\`\`
+
+---
+
+### 👑 *Owner Controls*
+\`\`\`
+%addsudo             → Promote mod.
+%delsudo             → Demote mod.
+%addpower            → Grant power.
+%delpower            → Revoke power.
+%mode                → Set bot mode.
+%clearsession        → Purge session.
+%setpp               → Set bot avatar.
+%autotyping          → Toggle auto-type.
+%autoread            → Toggle auto-read.
+%antidelete          → Toggle anti-delete.
+%autoreact           → Toggle auto-react.
+\`\`\`
+
+---
+
+### 🛡️ *Group Admin Ops*
+\`\`\`
+%modes               → Toggle group features.
+%open                → Unlock group chat.
+%close               → Lock group chat.
+\`\`\`
+
+---
+
+### 📥 *Downloader Node*
+\`\`\`
+%play                → Stream song.
+%youtube             → Download YT media.
+%instagram           → Download IG media.
+%facebook            → Download FB media.
+%tiktok              → Download TT media.
+\`\`\`
+
+---
+
+**Owner:** 𓂀 𝕰𝖎𝖉𝖔𝖑𝖔𝖓 𝕻𝖚𝖈𝖐 𓂀
+**Console Motto:** *“𝘛𝘩𝘦 𝘥𝘳𝘢𝘨𝘰𝘯 𝘪𝘴 𝘯𝘰𝘵 𝘵𝘰 𝘣𝘦 𝘵𝘳𝘢𝘪𝘯𝘦𝘥—𝘪𝘵 𝘪𝘴 𝘵𝘰 𝘣𝘦 𝘧𝘦𝘢𝘳𝘦𝘥.”*
+
+═══▰▰▰▰▰▰▰▰═══
+    `);
   },
 };
