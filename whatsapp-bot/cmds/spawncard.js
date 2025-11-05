@@ -6,7 +6,6 @@ module.exports = {
   async execute(context) {
     const { sock, from, reply, hasRole, activeCardSpawns, CARD_CLAIM_COST } = context;
 
-    // In the original help, this was a mod command.
     if (!hasRole('mod')) {
         return reply('You do not have permission to use this command.');
     }
@@ -19,28 +18,28 @@ module.exports = {
         const response = await axios.get('https://aurora-api-ten.vercel.app/card/random');
         const cardData = response.data;
 
-        // Store the card details for the claim command
         activeCardSpawns[from] = {
             id: cardData.id,
             name: cardData.title,
             tier: cardData.tier,
             source: cardData.source,
             imageUrl: cardData.image,
+            price: CARD_CLAIM_COST,
             spawnTime: Date.now(),
         };
 
         let caption = `A wild card has appeared!\n\n`;
         caption += `*${cardData.title}*\n`;
-        caption += `Source: ${cardData.source}\n`;
-        caption += `Tier: ${cardData.tier}\n\n`;
-        caption += `Use \`%claim\` to add it to your collection! It costs ${CARD_CLAIM_COST} gold.`;
+        caption += `*Source:* ${cardData.source}\n`;
+        caption += `*Tier:* ${cardData.tier}\n\n`;
+        caption += `*Price:* ${CARD_CLAIM_COST} Gold\n`;
+        caption += `Use \`%claim\` to add this card to your deck!`;
 
         await sock.sendMessage(from, {
             image: { url: cardData.image },
             caption: caption,
         });
 
-        // Set a timeout for the card to disappear (5 minutes)
         setTimeout(() => {
             if (activeCardSpawns[from] && activeCardSpawns[from].id === cardData.id) {
                 delete activeCardSpawns[from];

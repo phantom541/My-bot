@@ -64,7 +64,6 @@ const GUILD_TIERS = {
 };
 const PREFIX = '%';
 const STARTER_DRAGON_IDS = [3, 4, 5, 6, 7, 9];
-const rolesHierarchy = ['user', 'mod', 'owner'];
 const cooldowns = {
   spawn: 5 * 60 * 1000,
   train: 15 * 60 * 1000,
@@ -481,6 +480,7 @@ async function main() {
         }
     };
 
+    const rolesHierarchy = ['user', 'mod', 'owner'];
     const hasRole = (role) => {
         const userRoles = player.roles || [];
         if (isOwner) return true;
@@ -589,26 +589,38 @@ async function main() {
                     const response = await axios.get('https://db.ygoprodeck.com/api/v7/cardinfo.php?race=Dragon');
                     const dragonCards = response.data.data;
                     const randomDragonCard = dragonCards[Math.floor(Math.random() * dragonCards.length)];
-                    cardToSpawn = { name: randomDragonCard.name, tier: 'Dragon', imageUrl: randomDragonCard.card_images[0].image_url, type: 'dragon_card' };
+                    cardToSpawn = {
+                        name: randomDragonCard.name,
+                        tier: 'Dragon',
+                        source: 'Yu-Gi-Oh!',
+                        imageUrl: randomDragonCard.card_images[0].image_url,
+                        price: CARD_CLAIM_COST
+                    };
                 } else {
                     const searchTerms = ['anime', 'anime fight', 'kawaii', 'chibi'];
                     const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
                     const response = await axios.get(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${randomTerm}&limit=50&rating=pg-13`);
                     const gifs = response.data.data;
                     const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-                    cardToSpawn = { name: randomGif.title || 'Anime GIF', tier: 'Anime', imageUrl: randomGif.images.original.url.split('?')[0], type: 'anime_gif' };
+                    cardToSpawn = {
+                        name: randomGif.title || 'Anime GIF',
+                        tier: 'Anime',
+                        source: 'Giphy',
+                        imageUrl: randomGif.images.original.url.split('?')[0],
+                        price: CARD_CLAIM_COST
+                    };
                 }
 
                 activeCardSpawns[groupId] = cardToSpawn;
 
-                const imageResponse = await axios.get(cardToSpawn.imageUrl, { responseType: 'arraybuffer' });
-                const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-
                 let caption = `A wild card has appeared!\n\n`;
-                caption += `*${cardToSpawn.name}* (Tier: ${cardToSpawn.tier})\n\n`;
-                caption += `Use \`%claim\` to add it to your collection! It costs 100 gold.`;
+                caption += `*${cardToSpawn.name}*\n`;
+                caption += `*Source:* ${cardToSpawn.source}\n`;
+                caption += `*Tier:* ${cardToSpawn.tier}\n\n`;
+                caption += `*Price:* ${cardToSpawn.price} Gold\n`;
+                caption += `Use \`%claim\` to add this card to your deck!`;
 
-                await sock.sendMessage(groupId, { image: imageBuffer, caption: caption });
+                await sock.sendMessage(groupId, { image: { url: cardToSpawn.imageUrl }, caption: caption });
 
                 // Card disappears after 5 minutes
                 setTimeout(() => {
