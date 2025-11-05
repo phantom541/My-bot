@@ -492,7 +492,7 @@ async function main() {
     if (player.banned) return;
 
     //-Owner Check
-    const isOwner = OWNER_NUMBER.includes(sender);
+    const isOwner = sender.includes(OWNER_NUMBER);
     if (isOwner && !player.roles.includes('owner')) {
         player.roles.push('owner');
         savePlayer();
