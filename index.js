@@ -47,7 +47,7 @@ cloudinary.config({
 });
 
 // Bot Configuration - Using environment variables
-const OWNER_NAME = process.env.BOT_OWNER_NAME || 'Bot Owner';
+const OWNER_NAME = "phantom"
 const OWNER_NUMBER = process.env.BOT_OWNER_NUMBER;
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const CARD_CLAIM_COST = parseInt(process.env.CARD_CLAIM_COST) || 100;
