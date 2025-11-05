@@ -2,50 +2,47 @@ module.exports = {
   name: 'cards',
   description: "View your card collection.",
   async execute(context) {
-    const { player, reply } = context;
+    const { sock, from, msg, player } = context;
 
-    const collection = player.pc || [];
-    const deck = player.deck || [];
-    const holder = player.holder || [];
+    const allCards = [...(player.pc || []), ...(player.deck || []), ...(player.holder || [])];
 
-    if (collection.length === 0 && deck.length === 0 && holder.length === 0) {
-      return reply("Your card collection is empty. Use %spawncard (mod command) to find new cards or %buypack to get some!");
+    if (allCards.length === 0) {
+      await sock.sendMessage(from, { text: "Your card collection is empty. Use %claim to find new cards or %buypack to get some!" }, { quoted: msg });
+      return;
     }
 
     let message = "🃏 *Your Card Collection* 🃏\n\n";
-    let cardCount = 0;
-
-    if (deck.length > 0) {
-        message += "Deck:\n";
-        deck.forEach((card, index) => {
-            message += ` ${index + 1}. *${card.name}* (Tier: ${card.tier})\n`;
-            cardCount++;
+    if (player.deck && player.deck.length > 0) {
+        message += "*Deck:*\n";
+        player.deck.forEach((card, i) => {
+            message += `${i + 1}. ${card.name} (Tier ${card.tier})\n`;
         });
         message += "\n";
     }
-
-    if (holder.length > 0) {
-        message += "Holder:\n";
-        holder.forEach((card, index) => {
-            message += ` ${index + 1}. *${card.name}* (Tier: ${card.tier})\n`;
-            cardCount++;
+    if (player.holder && player.holder.length > 0) {
+        message += "*Holder:*\n";
+        player.holder.forEach((card, i) => {
+            message += `${i + 1}. ${card.name} (Tier ${card.tier})\n`;
         });
         message += "\n";
     }
-
-    if (collection.length > 0) {
-        message += "Unsorted:\n";
-        collection.forEach((card, index) => {
-            message += ` ${index + 1}. *${card.name}* (Tier: ${card.tier}, Source: ${card.source})\n`;
-            cardCount++;
+    if (player.pc && player.pc.length > 0) {
+        message += "*Unsorted:*\n";
+        player.pc.forEach((card, i) => {
+            message += `${i + 1}. ${card.name} (Tier ${card.tier})\n`;
         });
-        message += "\n";
     }
 
-    if (cardCount === 0) {
-         return reply("Your card collection is empty. Use %spawncard (mod command) to find new cards or %buypack to get some!");
-    }
+    const displayCard = allCards.find(c => c.imageUrl) || { imageUrl: 'https://i.imgur.com/76pA8gq.jpeg' };
 
-    await reply(message.trim());
+    try {
+        await sock.sendMessage(from, {
+            image: { url: displayCard.imageUrl },
+            caption: message
+        }, { quoted: msg });
+    } catch (error) {
+        console.error("Error sending card collection:", error);
+        await sock.sendMessage(from, { text: message }, { quoted: msg });
+    }
   },
 };

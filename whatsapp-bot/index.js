@@ -5,7 +5,8 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  jidNormalizedUser,
 } = require("baileys");
 const fs = require('fs');
 const path = require('path');
@@ -333,7 +334,21 @@ const activeDungeons = {};
 const activeBeast = {};
 
 async function main() {
-  const { state, saveCreds } = await useMultiFileAuthState('./auth_info_folder');
+  // Session management
+  const authFolder = './auth_info_folder';
+  if (process.env.SESSION_ID) {
+    try {
+      if (!fs.existsSync(authFolder)) {
+        fs.mkdirSync(authFolder);
+      }
+      const creds = JSON.parse(Buffer.from(process.env.SESSION_ID, 'base64').toString('utf-8'));
+      fs.writeFileSync(`${authFolder}/creds.json`, JSON.stringify(creds, null, 2));
+    } catch (e) {
+      console.error("Invalid SESSION_ID:", e);
+    }
+  }
+
+  const { state, saveCreds } = await useMultiFileAuthState(authFolder);
 
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`Using WhatsApp version v${version.join('.')}, isLatest: ${isLatest}`);
@@ -459,29 +474,39 @@ async function main() {
         try {
             const groupMetadata = await sock.groupMetadata(jid);
             const participantInfo = groupMetadata.participants.find(p => p.id === participant);
-            return participantInfo && (participantInfo.admin === 'admin' || participantInfo.admin === 'superadmin');
+            return !!(participantInfo?.admin || isOwner);
         } catch (error) {
             console.error('Error checking group admin status:', error);
             return false;
         }
     };
 
-    const hasRole = (role) =>
-      role === 'owner' ? player.roles.includes('owner')
-        : role === 'mod' ? player.roles.includes('mod') || player.roles.includes('owner')
-          : true;
+    const hasRole = (role) => {
+        const userRoles = player.roles || [];
+        if (isOwner) return true;
+
+        const roleIndex = rolesHierarchy.indexOf(role);
+        return userRoles.some(userRole => rolesHierarchy.indexOf(userRole) >= roleIndex);
+    };
 
     if (player.banned) return;
 
-    // Normalize both sender and owner numbers to handle both JID and LID formats
-    const ownerId = OWNER_NUMBER.split('@')[0];
-    const senderId = sender.split('@')[0];
-
-    if (senderId === ownerId && !player.roles.includes('owner')) {
+    //-Owner Check
+    const isOwner = OWNER_NUMBER.includes(sender);
+    if (isOwner && !player.roles.includes('owner')) {
         player.roles.push('owner');
         savePlayer();
-        await reply(`Welcome, owner! You have been granted owner role.`);
     }
+
+    const getProfilePicture = async (jid) => {
+        try {
+            const ppUrl = await sock.profilePictureUrl(jid, 'image');
+            return ppUrl;
+        } catch (error) {
+            console.error(`Error fetching profile picture for ${jid}:`, error);
+            return 'https://i.imgur.com/76pA8gq.jpeg';
+        }
+    };
 
     const command = sock.commands.get(commandName);
 
@@ -501,6 +526,8 @@ async function main() {
         reply,
         isGroupAdmin,
         hasRole,
+        isOwner,
+        getProfilePicture,
         commandName,
         // State and Data
         activeWildEncounters, activeBattles, activeTrades, quests, dungeons, market, achievements,
