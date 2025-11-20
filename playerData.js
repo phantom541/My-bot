@@ -35,12 +35,17 @@ function getPlayer(id, name) {
       banned: false,
       dailyQuest: null,
       guildId: null,
-      titles: []
+      titles: [],
+      adventureStarted: false
     };
     savePlayers(players);
   } else {
     // Data migration for existing players
     let needsSave = false;
+    if (players[id].adventureStarted === undefined) {
+        players[id].adventureStarted = false;
+        needsSave = true;
+    }
     if (players[id].titles === undefined) {
         players[id].titles = [];
         needsSave = true;

@@ -1,32 +1,37 @@
+const dragonClasses = require('../dragonClasses');
+
 module.exports = {
   name: 'start-hunt',
-  description: 'Start your adventure and choose a dragon.',
+  description: 'Begin your adventure by choosing a dragon class.',
   async execute(context) {
-    const { sock, from, msg, player, savePlayer, dragons, STARTER_DRAGON_IDS } = context;
+    const { sock, from, msg, player } = context;
 
-    if (player.party && player.party.length > 0) {
+    if (player.adventureStarted) {
       return sock.sendMessage(from, { text: 'You have already begun your adventure! Use `%party` to see your dragons.' }, { quoted: msg });
     }
 
-    const starterDragons = STARTER_DRAGON_IDS.map(id => dragons.find(d => d.id === id));
+    let message = `*Welcome, Dragon Hunter! A new journey awaits.*\n\n`;
+    message += `The world of dragons is vast and diverse. Dragons are categorized into classes, each with unique traits and abilities. Choose a class to explore the starter dragons within it.\n\n`;
 
-    let message = `*Welcome, Dragonbound! Your saga begins now.*\n\n`;
-    message += `A path unfolds before you, and with it, a choice. Six young dragons await a partner to raise them. Choose wisely, as this creature will be your first companion in a world of myth and magic.\n\n`;
+    for (const className in dragonClasses) {
+      const dClass = dragonClasses[className];
+      message += `*${dClass.name}*\n`;
+      message += `${dClass.description}\n\n`;
+    }
 
-    starterDragons.forEach(dragon => {
-        if (dragon) {
-            message += `*${dragon.id}: ${dragon.name}* - [ Type: ${dragon.type} ]\n`;
-        }
-    });
+    message += `To view the dragons in a class, use the command \`%viewclass <ClassName>\`.\nFor example: \`%viewclass "Inferno Drakes"\``;
 
-    message += `\nTo choose your companion, reply with \`%choose <id>\`. For example, \`%choose 3\`.`;
-
-    player.adventureStarted = true;
-    savePlayer();
-
-    await sock.sendMessage(from, {
-        image: { url: 'https://i.imgur.com/8a6a2e8.jpeg' },
-        caption: message
-    }, { quoted: msg });
+    // Send a collage of class images or a general welcome image
+    // For now, let's send one cool image and the text.
+    // In the future, could generate a collage.
+    try {
+      await sock.sendMessage(from, {
+          image: { url: 'https://i.imgur.com/8a6a2e8.jpeg' }, // A general "welcome" image
+          caption: message
+      }, { quoted: msg });
+    } catch (imgError) {
+      console.error("Failed to send welcome image in start-hunt:", imgError);
+      await sock.sendMessage(from, { text: message }, { quoted: msg }); // Fallback to text-only
+    }
   },
 };

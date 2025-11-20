@@ -491,6 +491,18 @@ async function main() {
 
     if (player.banned) return;
 
+    // Adventure Gate
+    const adventureGateBypassCommands = [
+        'start-hunt',
+        'viewclass',
+        'choose',
+        'help',
+        'menu'
+    ];
+    if (!player.adventureStarted && !adventureGateBypassCommands.includes(commandName)) {
+        return reply("You haven't started your adventure yet! Use `%start-hunt` to choose your first dragon and begin your journey.");
+    }
+
     //-Owner Check
     const isOwner = sender.includes(OWNER_NUMBER);
     if (isOwner && !player.roles.includes('owner')) {
@@ -620,7 +632,12 @@ async function main() {
                 caption += `*Price:* ${cardToSpawn.price} Gold\n`;
                 caption += `Use \`%claim\` to add this card to your deck!`;
 
-                await sock.sendMessage(groupId, { image: { url: cardToSpawn.imageUrl }, caption: caption });
+                try {
+                  await sock.sendMessage(groupId, { image: { url: cardToSpawn.imageUrl }, caption: caption });
+                } catch (imgError) {
+                  console.error(`Failed to send card image for "${cardToSpawn.name}". URL: ${cardToSpawn.imageUrl}`, imgError);
+                  await sock.sendMessage(groupId, { text: `A wild card appeared, but the image failed to load. Use '%claim' to get "${cardToSpawn.name}"!` });
+                }
 
                 // Card disappears after 5 minutes
                 setTimeout(() => {

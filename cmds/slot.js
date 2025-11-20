@@ -59,7 +59,7 @@ module.exports = {
         resultText += `*--------------------------*\n\n`;
 
         if (win > 0) {
-            player.gold += win;
+            player.gold += (win - amount);
             resultText += message;
         } else {
             player.gold -= amount;
