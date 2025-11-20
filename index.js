@@ -72,8 +72,18 @@ const XP_PER_LEVEL = 100;
 const XP_GAIN_MULTIPLIER = 10;
 const PLAYER_XP_GAIN = 50;
 const RANKS = [
-    'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master',
-    'Grandmaster', 'Elder', 'Legendary', 'Mythic', 'Titan', 'Dragon Master'
+    // Common Tiers (1-10)
+    'Iron', 'Bronze', 'Silver', 'Gold', 'Platinum',
+    // Uncommon Tiers (11-20)
+    'Jade', 'Obsidian', 'Amethyst', 'Ruby', 'Emerald',
+    // Rare Tiers (21-30)
+    'Sapphire', 'Diamond', 'Opal', 'Master', 'Grandmaster',
+    // Epic Tiers (31-40)
+    'Elder', 'Ancient', 'Venerable', 'Exalted', 'Illustrious',
+    // Legendary Tiers (41-50)
+    'Legendary', 'Mythic', 'Immortal', 'Divine', 'Celestial',
+    // Transcendent Tiers (51+)
+    'Titan', 'Ascendant', 'World Ender', 'Cosmic', 'Dragon God'
 ];
 
 const typeEffectiveness = {
