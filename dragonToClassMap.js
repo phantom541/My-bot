@@ -1,116 +1,27 @@
 // dragonToClassMap.js
-// Maps each dragon ID to its corresponding class name.
+// Maps each dragon ID to its corresponding class name based on the official 7 classes.
 
 const dragonToClassMap = {
-  // Inferno Drakes (Fire, Fury)
-  '1': 'Inferno Drakes',
-  '2': 'Inferno Drakes',
-  '3': 'Inferno Drakes',
-  '4': 'Inferno Drakes',
-  '13': 'Inferno Drakes',
-  '16': 'Inferno Drakes',
-  '20': 'Inferno Drakes',
-  '28': 'Inferno Drakes',
-  '33': 'Inferno Drakes',
-  '45': 'Inferno Drakes',
-  '53': 'Inferno Drakes',
-  '60': 'Inferno Drakes',
-  '65': 'Inferno Drakes',
-  '69': 'Inferno Drakes',
-  '72': 'Inferno Drakes',
-  '80': 'Inferno Drakes',
-  '95': 'Inferno Drakes',
-  '98': 'Inferno Drakes',
+  // Stoker Class (Fire-breathing, hot-headed)
+  '1': 'Stoker', '2': 'Stoker', '4': 'Stoker', '13': 'Stoker', '16': 'Stoker', '20': 'Stoker', '28': 'Stoker', '33': 'Stoker', '45': 'Stoker', '53': 'Stoker', '60': 'Stoker', '65': 'Stoker', '69': 'Stoker', '72': 'Stoker', '80': 'Stoker', '95': 'Stoker', '98': 'Stoker',
 
-  // Tidal Serpents (Water, Aquatic)
-  '9': 'Tidal Serpents',
-  '25': 'Tidal Serpents',
-  '34': 'Tidal Serpents',
-  '42': 'Tidal Serpents',
-  '66': 'Tidal Serpents',
-  '84': 'Tidal Serpents',
-  '89': 'Tidal Serpents',
+  // Boulder Class (Tough, rock-eating)
+  '5': 'Boulder', '12': 'Boulder', '22': 'Boulder', '24': 'Boulder', '27': 'Boulder', '31': 'Boulder', '39': 'Boulder', '46': 'Boulder', '50': 'Boulder', '64': 'Boulder', '71': 'Boulder', '79': 'Boulder', '81': 'Boulder', '82': 'Boulder', '88': 'Boulder',
 
-  // Gale Wyverns (Wind, Electric, Sky)
-  '7': 'Gale Wyverns',
-  '8': 'Gale Wyverns',
-  '10': 'Gale Wyverns',
-  '15': 'Gale Wyverns',
-  '18': 'Gale Wyverns',
-  '32': 'Gale Wyverns',
-  '35': 'Gale Wyverns',
-  '37': 'Gale Wyverns',
-  '38': 'Gale Wyverns',
-  '40': 'Gale Wyverns',
-  '47': 'Gale Wyverns',
-  '77': 'Gale Wyverns',
-  '78': 'Gale Wyverns',
-  '83': 'Gale Wyverns',
+  // Tracker Class (Hunting, tracking abilities)
+  '3': 'Tracker', '41': 'Tracker', '70': 'Tracker', '74': 'Tracker',
 
-  // Stonehide Behemoths (Earth, Rock, Bone)
-  '5': 'Stonehide Behemoths',
-  '12': 'Stonehide Behemoths',
-  '19': 'Stonehide Behemoths',
-  '22': 'Stonehide Behemoths',
-  '24': 'Stonehide Behemoths',
-  '27': 'Stonehide Behemoths',
-  '31': 'Stonehide Behemoths',
-  '39': 'Stonehide Behemoths',
-  '46': 'Stonehide Behemoths',
-  '50': 'Stonehide Behemoths',
-  '64': 'Stonehide Behemoths',
-  '71': 'Stonehide Behemoths',
-  '79': 'Stonehide Behemoths',
-  '81': 'Stonehide Behemoths',
-  '82': 'Stonehide Behemoths',
-  '88': 'Stonehide Behemoths',
+  // Sharp Class (Sharp features, projectiles, proud)
+  '15': 'Sharp', '21': 'Sharp', '48': 'Sharp', '55': 'Sharp', '67': 'Sharp', '76': 'Sharp', '77': 'Sharp', '93': 'Sharp',
 
-  // Venomfang Brood (Poison, Dark, Shadow)
-  '6': 'Venomfang Brood',
-  '11': 'Venomfang Brood',
-  '29': 'Venomfang Brood',
-  '30': 'Venomfang Brood',
-  '41': 'Venomfang Brood',
-  '43': 'Venomfang Brood',
-  '44': 'Venomfang Brood',
-  '51': 'Venomfang Brood',
-  '52': 'Venomfang Brood',
-  '58': 'Venomfang Brood',
-  '63': 'Venomfang Brood',
-  '70': 'Venomfang Brood',
-  '74': 'Venomfang Brood',
-  '75': 'Venomfang Brood',
-  '76': 'Venomfang Brood',
-  '85': 'Venomfang Brood',
-  '87': 'Venomfang Brood',
-  '90': 'Venomfang Brood',
-  '91': 'Venomfang Brood',
-  '93': 'Venomfang Brood',
-  '96': 'Venomfang Brood',
+  // Tidal Class (Ocean-dwelling, non-fire abilities)
+  '9': 'Tidal', '14': 'Tidal', '18': 'Tidal', '25': 'Tidal', '34': 'Tidal', '42': 'Tidal', '54': 'Tidal', '59': 'Tidal', '62': 'Tidal', '66': 'Tidal', '73': 'Tidal', '84': 'Tidal', '89': 'Tidal', '92': 'Tidal', '94': 'Tidal',
 
-  // Celestial Guardians (Light, Ice, Misc)
-  '14': 'Celestial Guardians',
-  '17': 'Celestial Guardians',
-  '21': 'Celestial Guardians',
-  '23': 'Celestial Guardians',
-  '26': 'Celestial Guardians',
-  '36': 'Celestial Guardians',
-  '48': 'Celestial Guardians',
-  '49': 'Celestial Guardians',
-  '54': 'Celestial Guardians',
-  '55': 'Celestial Guardians',
-  '56': 'Celestial Guardians',
-  '57': 'Celestial Guardians',
-  '59': 'Celestial Guardians',
-  '61': 'Celestial Guardians',
-  '62': 'Celestial Guardians',
-  '67': 'Celestial Guardians',
-  '68': 'Celestial Guardians',
-  '73': 'Celestial Guardians',
-  '86': 'Celestial Guardians',
-  '92': 'Celestial Guardians',
-  '94': 'Celestial Guardians',
-  '97': 'Celestial Guardians',
+  // Mystery Class (Unique, surprising abilities)
+  '6': 'Mystery', '11': 'Mystery', '19': 'Mystery', '23': 'Mystery', '26': 'Mystery', '29': 'Mystery', '30': 'Mystery', '49': 'Mystery', '56': 'Mystery', '57': 'Mystery', '58': 'Mystery', '61': 'Mystery', '75': 'Mystery', '87': 'Mystery', '97': 'Mystery',
+
+  // Strike Class (Powerful, intelligent, speed/lightning)
+  '7': 'Strike', '8': 'Strike', '10': 'Strike', '17': 'Strike', '32': 'Strike', '35': 'Strike', '36': 'Strike', '37': 'Strike', '38': 'Strike', '40': 'Strike', '43': 'Strike', '44': 'Strike', '51': 'Strike', '52': 'Strike', '63': 'Strike', '68': 'Strike', '83': 'Strike', '85': 'Strike', '86': 'Strike', '90': 'Strike', '91': 'Strike', '96': 'Strike',
 };
 
 module.exports = dragonToClassMap;

@@ -2,15 +2,15 @@
 // Maps dragon classes to their available starter dragon IDs.
 
 const starterDragonMap = {
-  "Inferno Drakes": [4], // Monstrous Nightmare
-  "Tidal Serpents": [9], // Scauldron
-  "Gale Wyverns": [7], // Terrible Terror
-  "Stonehide Behemoths": [5], // Gronckle
-  "Venomfang Brood": [6], // Hideous Zippleback
-  "Celestial Guardians": [3] // Deadly Nadder
+  "Stoker": [4],   // Monstrous Nightmare
+  "Boulder": [5],  // Gronckle
+  "Tracker": [3],  // Deadly Nadder
+  "Sharp": [15],   // Stormcutter (as a proxy for a generic sharp class starter)
+  "Tidal": [9],    // Scauldron
+  "Mystery": [6],  // Hideous Zippleback
+  "Strike": [7],   // Terrible Terror
 };
 
-// In a future update, you could add more IDs to each class array
-// to give players more starter options within a class.
+// Note: Some classes have stronger starters than others for variety.
 
 module.exports = starterDragonMap;
