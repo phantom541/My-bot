@@ -467,6 +467,7 @@ async function main() {
     player.holder = player.holder || [];
 
     const savePlayer = () => updatePlayer(player);
+    savePlayer();
 
     const isGroupAdmin = async (jid, participant) => {
         try {
