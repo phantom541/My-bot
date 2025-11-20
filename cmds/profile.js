@@ -24,9 +24,13 @@ module.exports = {
             const profilePicUrl = await getProfilePicture(targetJid);
             const userRank = getRank(player.level || 1);
             const guild = player.guildId ? getGuild(player.guildId) : null;
+            const partner = player.partnerId ? getPlayer(player.partnerId) : null;
 
             let profileCaption = `*👤 Profile: ${player.name}*\n`;
-            profileCaption += `*칭호 (Title):* ${player.title || 'No Title'}\n`;
+            profileCaption += `*칭호 (Title):* ${player.activeTitle || 'No Title'}\n`;
+            if (partner) {
+                profileCaption += `*💍 Married To:* ${partner.name}\n`;
+            }
             profileCaption += `*🎖️ Level:* ${player.level || 1}\n`;
             profileCaption += `*🏆 Rank:* ${userRank}\n`;
             profileCaption += `*✨ XP:* ${player.playerXp || 0} / ${ (player.level || 1) * 100}\n`;

@@ -36,14 +36,29 @@ function getPlayer(id, name) {
       dailyQuest: null,
       guildId: null,
       titles: [],
-      adventureStarted: false
+      activeTitle: null,
+      partnerId: null,
+      adventureStarted: false,
+      eggs: []
     };
     savePlayers(players);
   } else {
     // Data migration for existing players
     let needsSave = false;
+    if (players[id].eggs === undefined) {
+        players[id].eggs = [];
+        needsSave = true;
+    }
     if (players[id].adventureStarted === undefined) {
         players[id].adventureStarted = false;
+        needsSave = true;
+    }
+    if (players[id].partnerId === undefined) {
+        players[id].partnerId = null;
+        needsSave = true;
+    }
+    if (players[id].activeTitle === undefined) {
+        players[id].activeTitle = null;
         needsSave = true;
     }
     if (players[id].titles === undefined) {
@@ -79,6 +94,14 @@ function getPlayer(id, name) {
                 }
                 if (dragon.xp === undefined) {
                     dragon.xp = 0;
+                    needsSave = true;
+                }
+                if (dragon.bonus_attack === undefined) {
+                    dragon.bonus_attack = 0;
+                    needsSave = true;
+                }
+                if (dragon.bonus_defense === undefined) {
+                    dragon.bonus_defense = 0;
                     needsSave = true;
                 }
             });
