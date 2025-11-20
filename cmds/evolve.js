@@ -1,5 +1,6 @@
 const evolutionPaths = require('../evolutionData');
 const allDragons = require('../dragonData');
+const dragonToClassMap = require('../dragonToClassMap');
 
 module.exports = {
   name: 'evolve',
@@ -36,25 +37,48 @@ module.exports = {
       }
     }
 
-    // All requirements met, proceed with evolution
+    // Consume items
     for (const itemId in reqs.items) {
       player.inventory[itemId] -= reqs.items[itemId];
     }
 
     const evolvedDragonData = allDragons.find(d => d.id === evolutionPath.evolvesTo);
-    const originalLevel = dragonToEvolve.level;
-    const originalXp = dragonToEvolve.xp;
 
-    player.party[partyIndex] = {
+    // Create the new dragon object, keeping relevant stats
+    const evolvedDragon = {
       ...evolvedDragonData,
-      level: originalLevel, // Keep the original level and xp
-      xp: originalXp,
-      gender: dragonToEvolve.gender, // Keep gender
+      level: dragonToEvolve.level,
+      xp: dragonToEvolve.xp,
+      gender: dragonToEvolve.gender,
+      bonus_attack: dragonToEvolve.bonus_attack || 0,
+      bonus_defense: dragonToEvolve.bonus_defense || 0,
     };
 
+    // Apply enhancements
+    let enhancementMessage = '';
+    if (evolutionPath.enhancements) {
+      const enhancements = evolutionPath.enhancements;
+      if (enhancements.classChange) {
+        dragonToClassMap[evolvedDragon.id] = enhancements.classChange;
+        enhancementMessage += `\nIts class has ascended to *${enhancements.classChange}*!`;
+      }
+      if (enhancements.moveDamageMultiplier) {
+        evolvedDragon.moves.forEach(move => {
+          move.damage = Math.floor(move.damage * enhancements.moveDamageMultiplier);
+        });
+        enhancementMessage += `\nIts moves are now more powerful!`;
+      }
+      if (enhancements.damageReduction) {
+        // We'll store this as a new property on the dragon
+        evolvedDragon.damageReduction = enhancements.damageReduction;
+        enhancementMessage += `\nIt now takes less damage in battles!`;
+      }
+    }
+
+    player.party[partyIndex] = evolvedDragon;
     savePlayer();
 
-    let evolutionMessage = `*Congratulations! Your ${dragonToEvolve.name} has evolved into a ${evolvedDragonData.name}!* 🎉`;
+    let evolutionMessage = `*Congratulations! Your ${dragonToEvolve.name} has evolved into a ${evolvedDragonData.name}!* 🎉${enhancementMessage}`;
 
     await sock.sendMessage(from, {
         image: { url: evolvedDragonData.imageUrl },

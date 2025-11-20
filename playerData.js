@@ -39,12 +39,17 @@ function getPlayer(id, name) {
       activeTitle: null,
       partnerId: null,
       adventureStarted: false,
-      eggs: []
+      eggs: [],
+      maxRankRewardClaimed: false
     };
     savePlayers(players);
   } else {
     // Data migration for existing players
     let needsSave = false;
+    if (players[id].maxRankRewardClaimed === undefined) {
+        players[id].maxRankRewardClaimed = false;
+        needsSave = true;
+    }
     if (players[id].eggs === undefined) {
         players[id].eggs = [];
         needsSave = true;

@@ -22,6 +22,7 @@ const { createGuild, getGuild, getAllGuilds, updateGuild } = require('./guildDat
 const { DUNGEON_TIERS: dungeonTiers, generateDungeon } = require('./dungeonData.js');
 const { MONSTERS: monsters } = require('./monsters.js');
 const beasts = require('./beastData.js');
+const { addPlayerXp } = require('./leveling.js');
 const cloudinary = require('cloudinary').v2;
 const http = require('http');
 
@@ -233,7 +234,7 @@ async function handleDungeonProgression(from, sock) {
                 }
 
                 player.gold += goldGained;
-                player.playerXp += xpGained;
+                addPlayerXp(sock, from, player, xpGained, context);
                 updatePlayer(player);
                 sock.sendMessage(from, { text: `${player.name} receives ${goldGained} gold and ${xpGained} XP!${rewardMessage}` });
             });
@@ -566,7 +567,7 @@ async function main() {
         getPlayer, updatePlayer, getAllPlayers, getGroupSettings, updateGroupSettings,
         createGuild, getGuild, getAllGuilds, updateGuild, generateDungeon,
         handleDungeonProgression, generateBattleImage, findDragonImage,
-        getEffectiveness, getRank, getShipComment,
+        getEffectiveness, getRank, getShipComment, addPlayerXp,
     };
 
     try {

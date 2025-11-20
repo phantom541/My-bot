@@ -36,6 +36,11 @@ const dragonClasses = {
     name: "Strike",
     description: "Powerful and intelligent dragons, often associated with lightning or speed.",
     imageUrl: "https://i.imgur.com/5O1sU4N.jpeg"
+  },
+  "Alpha": {
+    name: "Alpha",
+    description: "The pinnacle of dragon evolution. Alphas command respect and possess immense power, often leading all other dragons.",
+    imageUrl: "https://i.imgur.com/8a6a2e8.jpeg"
   }
 };
 

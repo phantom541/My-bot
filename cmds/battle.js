@@ -138,7 +138,7 @@ module.exports = {
                     }
 
                     winner.gold += goldGained;
-                    winner.playerXp += playerXpGained;
+                    addPlayerXp(sock, from, winner, playerXpGained, context);
                     winner.titles.push(`${beast.name} Slayer`);
 
                     const tamedBeast = { ...beast, id: `beast_${beast.id}` };
@@ -220,14 +220,8 @@ module.exports = {
                     }
                 }
 
-                winner.playerXp += playerXpGained;
+                addPlayerXp(sock, from, winner, playerXpGained, context);
                 battleReport += `\nYou gained ${playerXpGained} player XP!`;
-
-                if (winner.playerXp >= winner.playerLevel * 100) {
-                    winner.playerLevel++;
-                    winner.playerXp = 0;
-                    battleReport += `\n*Congratulations! You reached level ${winner.playerLevel} and are now a ${getRank(winner.playerLevel)}!*`;
-                }
 
                 updateContextPlayer(winner);
                 delete activeBattles[from];
