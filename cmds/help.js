@@ -209,7 +209,7 @@ module.exports = {
 
 ---
 
-**Owner:** 𓂀 𝕰𝖎𝖉𝖔𝖑𝖔𝖓 𝕻𝖚𝖈𝖐 𓂀
+**Owner:** The phantom Fool
 **Console Motto:** *“𝘛𝘩𝘦 𝘥𝘳𝘢𝘨𝘰𝘯 𝘪𝘴 𝘯𝘰𝘵 𝘵𝘰 𝘣𝘦 𝘵𝘳𝘢𝘪𝘯𝘦𝘥—𝘪𝘵 𝘪𝘴 𝘵𝘰 𝘣𝘦 𝘧𝘦𝘢𝘳𝘦𝘥.”*
 
 ═══▰▰▰▰▰▰▰▰═══
