@@ -38,16 +38,18 @@ module.exports = {
       if (random < cumulativeChance) {
         rewardGiven = true;
         switch(reward.type) {
-          case 'gold':
+          case 'gold': {
             const goldAmount = Math.floor(Math.random() * (reward.amount[1] - reward.amount[0] + 1)) + reward.amount[0];
             player.gold += goldAmount;
             rewardMessage += `You found ${goldAmount} gold!`;
             break;
-          case 'item':
+          }
+          case 'item': {
             const itemAmount = Math.floor(Math.random() * (reward.amount[1] - reward.amount[0] + 1)) + reward.amount[0];
             player.inventory[reward.id] = (player.inventory[reward.id] || 0) + itemAmount;
             rewardMessage += `You found ${itemAmount}x ${allItems[reward.id].name}!`;
             break;
+          }
         }
         break; // Stop after giving one reward
       }
