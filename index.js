@@ -13,6 +13,7 @@ const path = require('path');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
 const { getPlayer, updatePlayer, getAllPlayers } = require('./playerData');
+const { ensureUserExists } = require('./utils/rpg_user_manager.js');
 const dragons = require('./dragonData');
 const ytdlp = require('ytdlp-nodejs');
 const shop = require('./shop.js');
@@ -331,6 +332,34 @@ const activeTournaments = {};
 const activeDungeons = {};
 const activeBeast = {};
 
+// --- RPG Database Management ---
+const DB_PATH = './rpg_database.json';
+
+// Load the database into a global variable
+try {
+    if (fs.existsSync(DB_PATH)) {
+        const rawData = fs.readFileSync(DB_PATH);
+        global.db = JSON.parse(rawData);
+    } else {
+        console.log("[INFO] No RPG database found, creating a new one.");
+        global.db = {};
+    }
+} catch (error) {
+    console.error("[ERROR] Failed to load RPG database:", error);
+    global.db = {};
+}
+
+// Function to save the database
+global.saveDb = () => {
+    try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(global.db, null, 2));
+    } catch (error) {
+        console.error("[ERROR] Failed to save RPG database:", error);
+    }
+};
+// --- End RPG Database Management ---
+
+
 async function main() {
   // Session management
   const authFolder = './auth_info_folder';
@@ -357,27 +386,40 @@ async function main() {
   });
   sock.ev.on('creds.update', saveCreds);
 
-  // Load Command Files
+  // Load Command Files Recursively
   sock.commands = new Map();
-  try {
-    const commandFiles = fs.readdirSync('./cmds').filter(file => file.endsWith('.js'));
-    console.log(`[INFO] Loading ${commandFiles.length} commands...`);
-    for (const file of commandFiles) {
-        try {
-            const command = require(`./cmds/${file}`);
-            if (command.name) {
-                sock.commands.set(command.name, command);
-                if (command.aliases && Array.isArray(command.aliases)) {
-                    command.aliases.forEach(alias => sock.commands.set(alias, command));
-                }
-            }
-        } catch (error) {
-            console.error(`[ERROR] Failed to load command at ${file}:`, error);
-        }
-    }
-  } catch (error) {
-    console.error("[ERROR] Could not read 'cmds' directory:", error);
-  }
+  const commandDirectory = './cmds';
+
+  const loadCommands = (dir) => {
+      try {
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+              const fullPath = path.join(dir, file);
+              const stat = fs.lstatSync(fullPath);
+              if (stat.isDirectory()) {
+                  loadCommands(fullPath); // Recurse into subdirectories
+              } else if (file.endsWith('.js')) {
+                  try {
+                      const command = require(path.resolve(fullPath));
+                      if (command.name) {
+                          sock.commands.set(command.name, command);
+                          if (command.aliases && Array.isArray(command.aliases)) {
+                              command.aliases.forEach(alias => sock.commands.set(alias, command));
+                          }
+                      }
+                  } catch (error) {
+                      console.error(`[ERROR] Failed to load command at ${fullPath}:`, error);
+                  }
+              }
+          }
+      } catch (error) {
+          console.error(`[ERROR] Could not read directory: ${dir}`, error);
+      }
+  };
+
+  console.log('[INFO] Loading commands...');
+  loadCommands(commandDirectory);
+  console.log(`[INFO] Loaded ${sock.commands.size} commands.`);
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -424,6 +466,10 @@ async function main() {
     const sender = msg.key.participant || msg.key.remoteJid;
     const from = msg.key.remoteJid;
     const messageContent = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    const pushName = msg.pushName || sender.split('@')[0];
+
+    // Ensure RPG user exists for every message
+    ensureUserExists(sender, pushName);
 
     const reply = async (text) => {
       await sock.sendMessage(from, { text }, { quoted: msg });
