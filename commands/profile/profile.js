@@ -1,4 +1,4 @@
-const { ensureUserExists, getPlayerProfile } = require('../../utils/rpg_user_manager.js');
+const { ensureUserExists, getPlayerProfile } = require('../../utils/database.js');
 
 module.exports = {
     name: 'profile',

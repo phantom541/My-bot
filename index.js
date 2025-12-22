@@ -13,7 +13,7 @@ const path = require('path');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
 const { getPlayer, updatePlayer, getAllPlayers } = require('./playerData');
-const { ensureUserExists } = require('./utils/rpg_user_manager.js');
+const { ensureUserExists } = require('./utils/database.js');
 const dragons = require('./dragonData');
 const ytdlp = require('ytdlp-nodejs');
 const shop = require('./shop.js');
@@ -333,7 +333,7 @@ const activeDungeons = {};
 const activeBeast = {};
 
 // --- RPG Database Management ---
-const DB_PATH = './rpg_database.json';
+const DB_PATH = './database/data.json';
 
 // Load the database into a global variable
 try {
@@ -388,7 +388,7 @@ async function main() {
 
   // Load Command Files Recursively
   sock.commands = new Map();
-  const commandDirectory = './cmds';
+  const commandDirectory = './commands';
 
   const loadCommands = (dir) => {
       try {
