@@ -1,15 +1,35 @@
+// cmds/deposit.js
+const { getPlayer, updatePlayer } = require('../playerData');
+
 module.exports = {
   name: 'deposit',
-  description: 'Deposits gold into your bank.',
+  description: 'Deposit money into your bank.',
+  aliases: ['dep'],
   async execute(context) {
-    const { args, player, savePlayer, reply } = context;
-    const amount = parseInt(args[0]);
-    if (isNaN(amount) || amount <= 0) return reply('Invalid amount.');
+    const { args, reply, sender } = context;
+    const player = getPlayer(sender);
 
-    if (player.gold < amount) return reply('Not enough gold.');
-    player.gold -= amount;
+    if (args.length === 0) {
+      return reply('Please specify the amount you want to deposit.');
+    }
+
+    const amount = parseInt(args[0]);
+    if (isNaN(amount) || amount <= 0) {
+      return reply('Invalid amount.');
+    }
+
+    if (player.wallet < amount) {
+      return reply("You don't have enough money in your wallet.");
+    }
+
+    if (player.bank + amount > player.bankMax) {
+      return reply('Your bank is full.');
+    }
+
+    player.wallet -= amount;
     player.bank += amount;
-    savePlayer();
-    await reply(`Deposited ${amount} gold. Bank balance: ${player.bank}`);
+    updatePlayer(player);
+
+    await reply(`You have deposited $${amount.toLocaleString()} into your bank.`);
   },
 };

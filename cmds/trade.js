@@ -1,18 +1,10 @@
+// cmds/trade.js
 module.exports = {
   name: 'trade',
-  description: 'Trade dragons with other players.',
+  description: 'Trade with another user.',
   async execute(context) {
-    const { args, msg, reply } = context;
-    const subCommand = args[0];
-    if (subCommand === 'accept' || subCommand === 'decline') {
-      await reply(`Trade ${subCommand}ed.`);
-      return;
-    }
-
-    const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!mentionedJid) {
-      return reply('Please mention a user to trade with.');
-    }
-    await reply(`Trade initiated with ${mentionedJid.split('@')[0]}.`);
+    const { reply } = context;
+    // This command is temporarily disabled for maintenance.
+    await reply('This command is currently under maintenance.');
   },
 };

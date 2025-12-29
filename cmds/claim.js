@@ -1,38 +1,26 @@
+// cmds/claim.js
 module.exports = {
   name: 'claim',
-  description: 'Claims a spawned card.',
+  description: 'Claim a spawned card.',
   async execute(context) {
-    const { from, player, savePlayer, reply, activeCardSpawns } = context;
+    const { reply, sender, activeCardSpawns, from, player, savePlayer } = context;
 
-    const cardToClaim = activeCardSpawns[from];
-
-    if (!cardToClaim) {
-      return reply('There is no card to claim right now.');
+    const card = activeCardSpawns[from];
+    if (!card) {
+      return reply('There is no card to claim in this chat.');
     }
 
-    const claimCost = cardToClaim.price || 100;
-
-    if (player.gold < claimCost) {
-      return reply(`You need ${claimCost} gold to claim this card, but you only have ${player.gold}.`);
+    if (player.wallet < card.price) {
+      return reply(`You need $${card.price} to claim this card.`);
     }
 
-    player.gold -= claimCost;
-
-    if (!player.deck) {
-      player.deck = [];
-    }
-    player.deck.push({
-      id: cardToClaim.id,
-      name: cardToClaim.name,
-      tier: cardToClaim.tier,
-      source: cardToClaim.source,
-      imageUrl: cardToClaim.imageUrl,
-    });
+    player.wallet -= card.price;
+    if (!player.deck) player.deck = [];
+    player.deck.push(card);
+    savePlayer();
 
     delete activeCardSpawns[from];
 
-    savePlayer();
-
-    await reply(`Congratulations! You have successfully claimed the "${cardToClaim.name}" card for ${claimCost} gold. It has been added to your deck.`);
+    await reply(`You have successfully claimed the ${card.name} card!`);
   },
 };

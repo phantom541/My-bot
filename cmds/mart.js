@@ -1,14 +1,20 @@
+// cmds/mart.js
+const shop = require('../shop');
+
 module.exports = {
   name: 'mart',
+  description: 'Display the item shop.',
   aliases: ['shop'],
-  description: 'Displays items available for purchase.',
   async execute(context) {
-    const { reply, shop } = context;
-    let shopText = '*Shop Items:*\n\n';
-    for (const key in shop) {
-      shopText += `*${shop[key].name}* - ${shop[key].price} gold\n`;
-      shopText += `> ${shop[key].description}\n\n`;
-    }
-    await reply(shopText);
+    const { reply } = context;
+    let shopMessage = '*--- Item Shop ---*\n\n';
+    shop.forEach(item => {
+      shopMessage += `*ID:* ${item.id}\n`;
+      shopMessage += `*Name:* ${item.name}\n`;
+      shopMessage += `*Price:* $${item.price.toLocaleString()}\n`;
+      shopMessage += `*Description:* ${item.description}\n\n`;
+    });
+    shopMessage += 'Use `%buy <ID>` to purchase an item.';
+    await reply(shopMessage);
   },
 };

@@ -1,49 +1,38 @@
-const { jidNormalizedUser } = require('baileys');
+// cmds/profile.js
+const { getPlayer } = require('../playerData');
 
 module.exports = {
-    name: 'profile',
-    description: 'View your or another user\'s profile.',
-    aliases: ['p'],
-    async execute(context) {
-        const { sock, msg, sender, getPlayer, getProfilePicture, getRank, getGuild } = context;
+  name: 'profile',
+  description: "Displays a user's profile.",
+  aliases: ['p'],
+  async execute(context) {
+    const { sock, msg, sender, getProfilePicture } = context;
+    const player = getPlayer(sender);
 
-        let targetJid;
-        if (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-            targetJid = jidNormalizedUser(msg.message.extendedTextMessage.contextInfo.mentionedJid[0]);
-        } else {
-            targetJid = jidNormalizedUser(sender);
-        }
+    // Fallback for profile picture
+    const profilePicUrl = await getProfilePicture(sender) || player.avatar;
 
-        const player = getPlayer(targetJid);
-        if (!player) {
-            await sock.sendMessage(sender, { text: "This user doesn't have a profile yet." }, { quoted: msg });
-            return;
-        }
+    // Format the profile message to match the .p command style
+    let profileMessage = `*--- ${player.name}'s Profile ---*\n\n`;
+    profileMessage += `*Age:* ${player.age || 'Not set'}\n`;
+    profileMessage += `*Bio:* ${player.bio}\n\n`;
+    profileMessage += `*Level:* ${player.level} | *Rank:* ${player.rank || '#N/A'}\n`;
+    profileMessage += `*XP:* ${player.xp} / ${player.level * 100}\n\n`;
+    profileMessage += `*Wallet:* $${player.wallet.toLocaleString()}\n`;
+    profileMessage += `*Bank:* $${player.bank.toLocaleString()} / $${player.bankMax.toLocaleString()}\n\n`;
+    profileMessage += `*Guild:* ${player.guildId || 'None'}\n`;
 
-        try {
-            const profilePicUrl = await getProfilePicture(targetJid);
-            const userRank = getRank(player.level || 1);
-            const guild = player.guildId ? getGuild(player.guildId) : null;
+    // Customization link (placeholder for now)
+    profileMessage += `*Customize:* [Link to Website]\n\n`;
 
-            let profileCaption = `*👤 Profile: ${player.name}*\n`;
-            profileCaption += `*칭호 (Title):* ${player.title || 'No Title'}\n`;
-            profileCaption += `*🎖️ Level:* ${player.level || 1}\n`;
-            profileCaption += `*🏆 Rank:* ${userRank}\n`;
-            profileCaption += `*✨ XP:* ${player.playerXp || 0} / ${ (player.level || 1) * 100}\n`;
-            profileCaption += `*💰 Gold:* ${player.gold || 0}\n`;
-            if (guild) {
-                profileCaption += `*🏰 Guild:* ${guild.name} (${guild.tier} Tier)\n`;
-            }
+    if (player.banned) {
+      profileMessage += `*Status:* BANNED`;
+    }
 
-            await sock.sendMessage(sender, {
-                image: { url: profilePicUrl },
-                caption: profileCaption,
-                mentions: [targetJid]
-            }, { quoted: msg });
-
-        } catch (error) {
-            console.error("Error in profile command:", error);
-            await sock.sendMessage(sender, { text: "An error occurred while fetching the profile." }, { quoted: msg });
-        }
-    },
+    // Send the profile message with the user's avatar
+    await sock.sendMessage(msg.chat, {
+      image: { url: profilePicUrl },
+      caption: profileMessage
+    }, { quoted: msg });
+  },
 };

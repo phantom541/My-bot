@@ -20,67 +20,104 @@ function savePlayers(data) {
 function getPlayer(id, name) {
   const players = loadPlayers();
   if (!players[id]) {
+    // Create a new user with the Nexus Society profile structure
     players[id] = {
       id,
       name,
-      gold: 1000,
+      age: null,
+      gender: null,
+      bio: "No bio set.",
+      avatar: "https://i.imgur.com/76pA8gq.jpeg",
+      cover: "https://i.imgur.com/76pA8gq.jpeg",
+      frame: null,
+      wallet: 1000, // Renamed from gold
       bank: 0,
-      playerLevel: 1,
-      playerXp: 0,
+      bankMax: 50000,
+      xp: 0,
+      level: 1,
+      rank: null,
+      titles: [],
+      badges: [],
+      inventory: {},
+      equipment: {},
+      warnings: [],
+      moderation_flags: [],
+      achievements: {},
+      stats: {},
+      createdAt: new Date().toISOString(),
+      // Legacy fields to be migrated
       party: [],
       den: [],
       cooldowns: {},
-      inventory: {},
       roles: [],
       banned: false,
       dailyQuest: null,
       guildId: null,
-      titles: []
     };
     savePlayers(players);
   } else {
-    // Data migration for existing players
+    // --- Data migration for existing players ---
     let needsSave = false;
-    if (players[id].titles === undefined) {
-        players[id].titles = [];
-        needsSave = true;
+    const player = players[id];
+
+    // Rename gold to wallet
+    if (player.gold !== undefined) {
+      player.wallet = player.gold;
+      delete player.gold;
+      needsSave = true;
     }
-    if (players[id].guildId === undefined) {
-        players[id].guildId = null;
+
+    // Add new fields with default values if they don't exist
+    const defaultFields = {
+      age: null,
+      gender: null,
+      bio: "No bio set.",
+      avatar: "https://i.imgur.com/76pA8gq.jpeg",
+      cover: "https://i.imgur.com/76pA8gq.jpeg",
+      frame: null,
+      wallet: 1000,
+      bank: 0,
+      bankMax: 50000,
+      xp: player.playerXp || 0, // Migrate from old xp
+      level: player.playerLevel || 1, // Migrate from old level
+      rank: null,
+      titles: [],
+      badges: [],
+      equipment: {},
+      warnings: [],
+      moderation_flags: [],
+      achievements: {},
+      stats: {},
+      createdAt: new Date().toISOString(),
+      inventory: player.inventory || {},
+      party: player.party || [],
+      den: player.den || [],
+      cooldowns: player.cooldowns || {},
+      roles: player.roles || [],
+      banned: player.banned || false,
+      dailyQuest: player.dailyQuest || null,
+      guildId: player.guildId || null,
+    };
+
+    for (const field in defaultFields) {
+      if (player[field] === undefined) {
+        player[field] = defaultFields[field];
         needsSave = true;
+      }
     }
-    if (players[id].playerLevel === undefined) {
-        players[id].playerLevel = 1;
-        needsSave = true;
+
+    // Clean up old level fields
+    if (player.playerXp !== undefined) {
+      delete player.playerXp;
+      needsSave = true;
     }
-    if (players[id].playerXp === undefined) {
-        players[id].playerXp = 0;
-        needsSave = true;
+    if (player.playerLevel !== undefined) {
+      delete player.playerLevel;
+      needsSave = true;
     }
-    if (players[id].banned === undefined) {
-        players[id].banned = false;
-        needsSave = true;
-    }
-    if (players[id].dailyQuest === undefined) {
-        players[id].dailyQuest = null;
-        needsSave = true;
-    }
-    ['party', 'den'].forEach(location => {
-        if (players[id][location]) {
-            players[id][location].forEach(dragon => {
-                if (dragon.level === undefined) {
-                    dragon.level = 1;
-                    needsSave = true;
-                }
-                if (dragon.xp === undefined) {
-                    dragon.xp = 0;
-                    needsSave = true;
-                }
-            });
-        }
-    });
+
     if (needsSave) {
-        savePlayers(players);
+      savePlayers(players);
     }
   }
   return players[id];
