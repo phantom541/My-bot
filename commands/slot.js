@@ -2,7 +2,7 @@ module.exports = {
   name: 'slot',
   description: 'Gamble your gold in the slot machine.',
   async execute(context) {
-    const { from, getGroupSettings, args, player, savePlayer, reply, sock, msg } = context;
+    const { from, getGroupSettings, args, player, reply, sock, msg } = context;
 
     if (from.endsWith('@g.us')) {
         const groupSettings = getGroupSettings(from);
@@ -27,6 +27,9 @@ module.exports = {
     if (player.gold < amount) {
         return reply('Not enough gold to slot.');
     }
+
+    // Deduct bet amount immediately
+    player.gold -= amount;
 
     await sock.sendMessage(from, { text: `*🎰 Spinning the slots for ${amount} gold...*` }, { quoted: msg });
 
@@ -62,7 +65,6 @@ module.exports = {
             player.gold += win;
             resultText += message;
         } else {
-            player.gold -= amount;
             resultText += `😢 Bad luck! You lost ${amount} gold.`;
         }
 

@@ -2,9 +2,9 @@ module.exports = {
   name: 'givecard',
   description: 'Give a card to another player.',
   async execute(context) {
-    const { args, msg, player, savePlayer, reply, getPlayer, updatePlayer } = context;
+    const { args, msg, player, reply, getPlayer, updatePlayer } = context;
 
-    const location = args[0]?.toLowerCase();
+    let location = args[0]?.toLowerCase();
     const cardIndex = parseInt(args[1]) - 1;
     const mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
 

@@ -2,7 +2,7 @@ module.exports = {
   name: 'remove',
   description: 'Remove a move from your dragon.',
   async execute(context) {
-    const { args, player, savePlayer, reply } = context;
+    const { args, player, reply } = context;
     const moveName = args.join(' ').toLowerCase();
     if (!moveName) return reply('Please specify the name of the move to remove.');
 

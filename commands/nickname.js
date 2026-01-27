@@ -2,7 +2,7 @@ module.exports = {
   name: 'nickname',
   description: 'Give your dragon a nickname.',
   async execute(context) {
-    const { args, player, savePlayer, reply } = context;
+    const { args, player, reply } = context;
     const dragonIndex = parseInt(args[0]) - 1;
     const newName = args.slice(1).join(' ');
 

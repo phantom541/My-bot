@@ -2,7 +2,7 @@ module.exports = {
   name: 'spawn',
   description: 'Spawns a wild dragon.',
   async execute(context) {
-    const { wildSpawnsEnabled, activeWildEncounters, from, player, cooldowns, savePlayer, reply, dragons, sender, sock } = context;
+    const { wildSpawnsEnabled, activeWildEncounters, from, player, cooldowns, reply, dragons, sender, sock } = context;
     if (!wildSpawnsEnabled.enabled) return reply('Wild spawns are currently disabled.');
     if (activeWildEncounters[from]) return reply('A wild dragon has already spawned in this chat.');
 

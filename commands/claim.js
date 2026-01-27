@@ -2,7 +2,7 @@ module.exports = {
   name: 'claim',
   description: 'Claims a spawned card.',
   async execute(context) {
-    const { from, player, savePlayer, reply, activeCardSpawns } = context;
+    const { from, player, reply, activeCardSpawns } = context;
 
     const cardToClaim = activeCardSpawns[from];
 

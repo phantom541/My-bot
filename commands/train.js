@@ -2,7 +2,7 @@ module.exports = {
   name: 'train',
   description: 'Train your dragons.',
   async execute(context) {
-    const { player, cooldowns, reply, savePlayer } = context;
+    const { player, cooldowns, reply } = context;
     const now = Date.now();
     const lastTrain = player.cooldowns.train || 0;
     if (now - lastTrain < cooldowns.train) {

@@ -145,3 +145,5 @@ groupSettings.json
 node_modules/
 .env
 *.log
+database.json
+backups/
