@@ -1,31 +1,38 @@
-const { saveDb } = require('../database/index');
-const spawnCardCmd = require('./spawncard');
-
 module.exports = {
-    name: 'claim',
-    description: 'Claim a spawned card.',
-    async execute({ sock, from, player, msg }) {
-        const spawn = spawnCardCmd.activeCardSpawns.get(from);
-        if (!spawn) {
-            return sock.sendMessage(from, { text: '❌ No card here to claim!' }, { quoted: msg });
-        }
+  name: 'claim',
+  description: 'Claims a spawned card.',
+  async execute(context) {
+    const { from, player, savePlayer, reply, activeCardSpawns } = context;
 
-        if (player.progression.wallet < spawn.claimPrice) {
-            return sock.sendMessage(from, { text: `❌ You need ${spawn.claimPrice} gold in your wallet to claim this!` }, { quoted: msg });
-        }
+    const cardToClaim = activeCardSpawns[from];
 
-        player.progression.wallet -= spawn.claimPrice;
-        player.cards = player.cards || [];
-        player.cards.push({
-            name: spawn.name,
-            imageUrl: spawn.imageUrl,
-            rarity: spawn.rarity,
-            id: spawn.id || Date.now()
-        });
-
-        spawnCardCmd.activeCardSpawns.delete(from);
-        saveDb();
-
-        await sock.sendMessage(from, { text: `✅ *Success!* You claimed "${spawn.name}" for ${spawn.claimPrice.toLocaleString()} gold.` }, { quoted: msg });
+    if (!cardToClaim) {
+      return reply('There is no card to claim right now.');
     }
+
+    const claimCost = cardToClaim.price || 100;
+
+    if (player.gold < claimCost) {
+      return reply(`You need ${claimCost} gold to claim this card, but you only have ${player.gold}.`);
+    }
+
+    player.gold -= claimCost;
+
+    if (!player.deck) {
+      player.deck = [];
+    }
+    player.deck.push({
+      id: cardToClaim.id,
+      name: cardToClaim.name,
+      tier: cardToClaim.tier,
+      source: cardToClaim.source,
+      imageUrl: cardToClaim.imageUrl,
+    });
+
+    delete activeCardSpawns[from];
+
+    require('../database/index').saveDb();
+
+    await reply(`Congratulations! You have successfully claimed the "${cardToClaim.name}" card for ${claimCost} gold. It has been added to your deck.`);
+  },
 };

@@ -7,11 +7,13 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 function getAuthContext(sock, msg) {
     const senderJid = jidNormalizedUser(msg.key.participant || msg.key.remoteJid);
     const isOwner = config.ownerNumbers.includes(senderJid);
+    const isSudo = global.db.sudo?.includes(senderJid) || false;
 
     return {
         senderJid,
         isOwner,
-        isAdmin: isOwner,
+        isSudo,
+        isAdmin: isOwner || isSudo,
     };
 }
 

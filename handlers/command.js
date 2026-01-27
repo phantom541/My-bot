@@ -3,6 +3,8 @@ const path = require('path');
 const config = require('../config');
 const { getAuthContext, isGroupAdmin } = require('./auth');
 const { ensureUserExists } = require('../utils/rpg_user_manager');
+const gameData = require('../services/gameData');
+const { getPlayer, updatePlayer, getAllPlayers } = require('../playerData');
 
 const commands = new Map();
 const cooldowns = new Map();
@@ -94,7 +96,21 @@ async function handleMessage(sock, m) {
         const reply = async (text) => {
             return sock.sendMessage(from, { text }, { quoted: msg });
         };
-        await command.execute({ sock, msg, args, from, sender, auth, player, config, commands, reply });
+        const rolesHierarchy = ['user', 'mod', 'owner'];
+        const hasRole = (role) => {
+            if (auth.isOwner) return true;
+            const userRoles = player.roles || [];
+            const roleIndex = rolesHierarchy.indexOf(role);
+            return userRoles.some(userRole => rolesHierarchy.indexOf(userRole) >= roleIndex);
+        };
+
+        const context = {
+            sock, msg, args, from, sender, auth, player, config, commands, reply,
+            getPlayer, updatePlayer, getAllPlayers,
+            hasRole,
+            ...gameData
+        };
+        await command.execute(context);
         // Auto-save after command execution
         require('../database/index').saveDb();
     } catch (err) {

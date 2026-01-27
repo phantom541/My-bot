@@ -1,33 +1,32 @@
-const { saveDb } = require('../database/index');
-const spawnCmd = require('./spawn');
-
 module.exports = {
-    name: 'catch',
-    description: 'Try to catch a spawned dragon.',
-    async execute({ sock, from, player, msg }) {
-        const dragon = spawnCmd.activeSpawns.get(from);
-        if (!dragon) {
-            return sock.sendMessage(from, { text: '❌ No wild dragon here to catch!' }, { quoted: msg });
-        }
+  name: 'catch',
+  description: 'Catch the spawned wild dragon.',
+  async execute(context) {
+    const { activeWildEncounters, from, sender, reply, player, args, savePlayer, activeBattles } = context;
+    const wildEncounter = activeWildEncounters[from];
+    if (!wildEncounter) return reply('There is no wild dragon to catch.');
 
-        // Logic for catching (simplified for now)
-        const success = Math.random() > 0.3;
-
-        if (success) {
-            spawnCmd.activeSpawns.delete(from);
-
-            player.inventory.dragons = player.inventory.dragons || [];
-            player.inventory.dragons.push({
-                ...dragon,
-                level: 1,
-                xp: 0,
-                capturedAt: Date.now()
-            });
-            saveDb();
-
-            await sock.sendMessage(from, { text: `🎉 *Congratulations!* You caught the ${dragon.name}!` }, { quoted: msg });
-        } else {
-            await sock.sendMessage(from, { text: `💨 The ${dragon.name} resisted your attempt!` }, { quoted: msg });
-        }
+    if (wildEncounter.isExclusive && wildEncounter.spawnerId !== sender) {
+        return reply('This dragon was spawned by another player. You must wait until their exclusive time is up.');
     }
+
+    const wildDragon = wildEncounter.dragon;
+    if (activeBattles[from]) return reply('You cannot catch a dragon while in battle.');
+
+    const tool = args[0]?.toLowerCase();
+    if (!tool) return reply('Please specify a tool to use for catching.');
+    if (!player.inventory[tool] || player.inventory[tool] <= 0) {
+      return reply(`You don't have any ${tool}.`);
+    }
+
+    player.inventory[tool]--;
+    wildDragon.captured = true;
+
+    player.den.push(wildDragon);
+
+    delete activeWildEncounters[from];
+    require('../database/index').saveDb();
+
+    await reply(`Congratulations! You caught the ${wildDragon.name}! It has been sent to your den.`);
+  },
 };
