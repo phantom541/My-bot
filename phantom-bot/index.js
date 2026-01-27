@@ -16,10 +16,10 @@ server.listen(PORT, '0.0.0.0', () => {
 
 async function startBot() {
     console.log("[SYS] Starting DragonBound Bot...");
-    
+
     // 1. Initialize Database
     loadDb();
-    
+
     // 2. Load Commands
     loadCommands();
 

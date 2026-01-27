@@ -1,8 +1,8 @@
 // cmds/gacha.js
 const { getPlayer, updatePlayer } = require('../playerData');
-const gachaData = require('../gachaData');
-const cardData = require('../cardData');
-const dragonData = require('../dragonData');
+const gachaData = require('../database/data/gachaData');
+const cardData = require('../database/data/cardData');
+const dragonData = require('../database/data/dragonData');
 
 // --- Helper function for weighted random selection ---
 function getWeightedRandom(items, probabilities) {
