@@ -1,6 +1,6 @@
 const dragons = require('../database/data/dragonData');
 const cards = require('../database/data/cardData');
-const { sendImage } = require('./media');
+const { sendDragonImage, sendCardImage } = require('./media');
 const spawnCmd = require('../commands/spawn');
 const spawnCardCmd = require('../commands/spawncard');
 
@@ -18,7 +18,7 @@ function initSpawners(sock) {
                     spawnCmd.activeSpawns.set(groupId, dragon);
 
                     const caption = `⚠️ *A wild ${dragon.name} has appeared!* ⚠️\n\nType \`%catch\` to try and capture it!`;
-                    await sendImage(sock, groupId, dragon.imageUrl, caption);
+                    await sendDragonImage(sock, groupId, dragon, caption);
                 } catch (err) {
                     console.error(`[SPAWNER] Error spawning dragon in ${groupId}:`, err);
                 }
@@ -39,10 +39,10 @@ function initSpawners(sock) {
                     let caption = `🃏 *A wild card has appeared!* 🃏\n\n`;
                     caption += `*Name:* ${card.name}\n`;
                     caption += `*Rarity:* ${card.rarity || 'Common'}\n`;
-                    caption += `*Claim Price:* ${claimPrice.toLocaleString()} gold\n\n`;
+                    caption += `*Claim Price:* ${claimPrice.toLocaleString()} wallet\n\n`;
                     caption += `Type \`%claim\` to add it to your deck!`;
 
-                    await sendImage(sock, groupId, card.imageUrl, caption);
+                    await sendCardImage(sock, groupId, card, caption);
                 } catch (err) {
                     console.error(`[SPAWNER] Error spawning card in ${groupId}:`, err);
                 }

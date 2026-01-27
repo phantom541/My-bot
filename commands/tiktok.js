@@ -1,40 +1,35 @@
-const ytdlp = require('ytdlp-nodejs');
+const { downloadMedia, isUnderLimit } = require('../services/downloader');
 
 module.exports = {
-  name: 'tiktok',
-  aliases: ['tt'],
-  description: 'Download from TikTok.',
-  async execute(context) {
-    const { args, reply, sock, from } = context;
-    const url = args[0];
+    name: 'tiktok',
+    aliases: ['tt'],
+    description: 'Download a video from TikTok.',
+    async execute({ sock, from, args, msg, reply }) {
+        const url = args[0];
+        if (!url) return reply('❌ Please provide a TikTok URL.');
 
-    if (!url || !url.includes('tiktok.com')) {
-      return reply('Please provide a valid TikTok URL.');
+        await reply(`📥 Downloading TikTok video...`);
+
+        try {
+            const media = await downloadMedia(url);
+
+            if (isUnderLimit(media.buffer)) {
+                await sock.sendMessage(from, {
+                    video: media.buffer,
+                    mimetype: 'video/mp4',
+                    caption: `🎬 *TikTok Download*`
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(from, {
+                    document: media.buffer,
+                    mimetype: 'video/mp4',
+                    fileName: media.filename,
+                    caption: `🎬 *TikTok Download* (Sent as document because it's > 16MB)`
+                }, { quoted: msg });
+            }
+        } catch (e) {
+            console.error('[TIKTOK] Error:', e);
+            await reply('❌ Failed to download TikTok video.');
+        }
     }
-
-    try {
-      await reply('Downloading from TikTok...');
-
-      const metadata = await ytdlp(url, {
-        dumpSingleJson: true,
-      });
-
-      const readableStream = ytdlp.execStream([
-        url,
-        '-f',
-        'best',
-        '-o',
-        '-',
-      ]);
-
-      await sock.sendMessage(from, {
-        video: readableStream,
-        caption: metadata.title || 'Downloaded from TikTok',
-      });
-
-    } catch (error) {
-      console.error('Error downloading from TikTok:', error);
-      await reply('Sorry, I could not download that video.');
-    }
-  },
 };

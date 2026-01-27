@@ -29,7 +29,10 @@ module.exports = {
     player.cooldowns.spawn = now;
     require('../database/index').saveDb();
 
-    await reply(`A wild ${randomDragon.name} (HP: ${randomDragon.hp}) has appeared! You have 1 minute to catch it before it becomes available to everyone.`);
+    const { sendDragonImage } = require('../services/media');
+    const caption = `⚠️ *A wild ${randomDragon.name} has appeared!* ⚠️\nHP: ${randomDragon.hp}\n\nYou have 1 minute to catch it before it becomes available to everyone. Use \`%catch\` to attempt capture!`;
+
+    await sendDragonImage(sock, from, randomDragon, caption);
 
     setTimeout(async () => {
         if (activeWildEncounters[from] && activeWildEncounters[from].isExclusive) {

@@ -28,17 +28,15 @@ module.exports = {
             spawnTime: Date.now(),
         };
 
-        let caption = `A wild card has appeared!\n\n`;
-        caption += `*${cardData.title}*\n`;
+        let caption = `🃏 *A rare card has appeared!* 🃏\n\n`;
+        caption += `*Name:* ${cardData.title}\n`;
         caption += `*Source:* ${cardData.source}\n`;
         caption += `*Tier:* ${cardData.tier}\n\n`;
-        caption += `*Price:* ${CARD_CLAIM_COST} Gold\n`;
-        caption += `Use \`%claim\` to add this card to your deck!`;
+        caption += `*Price:* ${CARD_CLAIM_COST} wallet\n\n`;
+        caption += `Type \`%%claim\` to add it to your deck!`;
 
-        await sock.sendMessage(from, {
-            image: { url: cardData.image },
-            caption: caption,
-        });
+        const { sendCardImage } = require('../services/media');
+        await sendCardImage(sock, from, activeCardSpawns[from], caption);
 
         setTimeout(() => {
             if (activeCardSpawns[from] && activeCardSpawns[from].id === cardData.id) {

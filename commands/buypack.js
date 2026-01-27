@@ -43,12 +43,17 @@ module.exports = {
 
       require('../database/index').saveDb();
 
-      let message = `You spent ${CARD_PACK_COST} gold and received a card pack containing:\n\n`;
+      let message = `You spent ${CARD_PACK_COST} wallet and received a card pack containing:\n\n`;
       receivedCards.forEach(card => {
         message += `- *${card.name}* (Tier: ${card.tier})\n`;
       });
 
       await reply(message);
+
+      const { sendCardImage } = require('../services/media');
+      for (const card of receivedCards) {
+        await sendCardImage(sock, from, card, `🃏 Pulled: *${card.name}* (${card.tier})`);
+      }
 
     } catch (error) {
       console.error('Error buying card pack:', error);

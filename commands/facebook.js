@@ -1,40 +1,35 @@
-const ytdlp = require('ytdlp-nodejs');
+const { downloadMedia, isUnderLimit } = require('../services/downloader');
 
 module.exports = {
-  name: 'facebook',
-  aliases: ['fb'],
-  description: 'Download from Facebook.',
-  async execute(context) {
-    const { args, reply, sock, from } = context;
-    const url = args[0];
+    name: 'facebook',
+    aliases: ['fb'],
+    description: 'Download a video from Facebook.',
+    async execute({ sock, from, args, msg, reply }) {
+        const url = args[0];
+        if (!url) return reply('❌ Please provide a Facebook URL.');
 
-    if (!url || (!url.includes('facebook.com') && !url.includes('fb.watch'))) {
-      return reply('Please provide a valid Facebook URL.');
+        await reply(`📥 Downloading Facebook video...`);
+
+        try {
+            const media = await downloadMedia(url);
+
+            if (isUnderLimit(media.buffer)) {
+                await sock.sendMessage(from, {
+                    video: media.buffer,
+                    mimetype: 'video/mp4',
+                    caption: `🎬 *Facebook Download*`
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(from, {
+                    document: media.buffer,
+                    mimetype: 'video/mp4',
+                    fileName: media.filename,
+                    caption: `🎬 *Facebook Download* (Sent as document because it's > 16MB)`
+                }, { quoted: msg });
+            }
+        } catch (e) {
+            console.error('[FACEBOOK] Error:', e);
+            await reply('❌ Failed to download Facebook video.');
+        }
     }
-
-    try {
-      await reply('Downloading from Facebook...');
-
-      const metadata = await ytdlp(url, {
-        dumpSingleJson: true,
-      });
-
-      const readableStream = ytdlp.execStream([
-        url,
-        '-f',
-        'best',
-        '-o',
-        '-',
-      ]);
-
-      await sock.sendMessage(from, {
-        video: readableStream,
-        caption: metadata.title || 'Downloaded from Facebook',
-      });
-
-    } catch (error) {
-      console.error('Error downloading from Facebook:', error);
-      await reply('Sorry, I could not download that content. It might be a private video.');
-    }
-  },
 };

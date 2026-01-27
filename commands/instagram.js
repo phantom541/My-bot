@@ -1,40 +1,35 @@
-const ytdlp = require('ytdlp-nodejs');
+const { downloadMedia, isUnderLimit } = require('../services/downloader');
 
 module.exports = {
-  name: 'instagram',
-  aliases: ['ig'],
-  description: 'Download from Instagram.',
-  async execute(context) {
-    const { args, reply, sock, from } = context;
-    const url = args[0];
+    name: 'instagram',
+    aliases: ['ig'],
+    description: 'Download a video/reel from Instagram.',
+    async execute({ sock, from, args, msg, reply }) {
+        const url = args[0];
+        if (!url) return reply('❌ Please provide an Instagram URL.');
 
-    if (!url || !url.includes('instagram.com')) {
-      return reply('Please provide a valid Instagram URL.');
+        await reply(`📥 Downloading Instagram content...`);
+
+        try {
+            const media = await downloadMedia(url);
+
+            if (isUnderLimit(media.buffer)) {
+                await sock.sendMessage(from, {
+                    video: media.buffer,
+                    mimetype: 'video/mp4',
+                    caption: `🎬 *Instagram Download*`
+                }, { quoted: msg });
+            } else {
+                await sock.sendMessage(from, {
+                    document: media.buffer,
+                    mimetype: 'video/mp4',
+                    fileName: media.filename,
+                    caption: `🎬 *Instagram Download* (Sent as document because it's > 16MB)`
+                }, { quoted: msg });
+            }
+        } catch (e) {
+            console.error('[INSTAGRAM] Error:', e);
+            await reply('❌ Failed to download Instagram content.');
+        }
     }
-
-    try {
-      await reply('Downloading from Instagram...');
-
-      const metadata = await ytdlp(url, {
-        dumpSingleJson: true,
-      });
-
-      const readableStream = ytdlp.execStream([
-        url,
-        '-f',
-        'best',
-        '-o',
-        '-',
-      ]);
-
-      await sock.sendMessage(from, {
-        video: readableStream,
-        caption: metadata.title || 'Downloaded from Instagram',
-      });
-
-    } catch (error) {
-      console.error('Error downloading from Instagram:', error);
-      await reply('Sorry, I could not download that content. It might be a private post or a story.');
-    }
-  },
 };

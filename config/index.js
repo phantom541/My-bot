@@ -7,13 +7,14 @@ module.exports = {
     databaseFile: process.env.DATABASE_FILE || 'database.json',
     backupDir: process.env.BACKUP_DIR || 'backups',
     maxBackups: parseInt(process.env.MAX_BACKUPS) || 20,
+    imageBaseUrl: process.env.IMAGE_BASE_URL || '',
     cloudinary: {
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
         api_key: process.env.CLOUDINARY_API_KEY,
         api_secret: process.env.CLOUDINARY_API_SECRET
     },
     giphy: {
-        api_key: process.env.GIPHY_API_KEY
+        api_key: process.env.GIPHY_KEY || process.env.GIPHY_API_KEY
     },
     unsplash: {
         access_key: process.env.UNSPLASH_ACCESS_KEY,
