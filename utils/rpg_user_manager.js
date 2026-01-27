@@ -1,27 +1,43 @@
-// utils/rpg_user_manager.js
+const { saveDb } = require('../database/index');
 
-// This file is adapted to use a global DB object loaded and saved by index.js
-// and to use CommonJS module syntax.
+function ensureStructures() {
+    if (!global.db) throw new Error("Database not initialized");
+    if (!global.db.players) global.db.players = {};
+    if (!global.db.sessions) global.db.sessions = {};
+}
 
-/**
- * Ensures a player profile exists in the database. If new, creates the default profile.
- * This should run on the first interaction of any new user.
- * @param {string} jid - WhatsApp JID (e.g., '92301...@s.whatsapp.net').
- * @param {string} name - The user's displayed name.
- * @returns {object} The user's profile object.
- */
+function normalizeJid(jid) {
+    if (!jid) return jid;
+    return jid.toString().trim().replace('+', '');
+}
+
 function ensureUserExists(jid, name) {
-    global.db.players = global.db.players || {};
-    global.db.sessions = global.db.sessions || {};
+    ensureStructures();
+    jid = normalizeJid(jid);
 
     if (global.db.players[jid]) {
-        return global.db.players[jid];
+        // Migration/Repair of existing player data if fields are missing
+        const player = global.db.players[jid];
+        if (!player.progression) player.progression = { level: 1, xp: 0, wallet: 100, location: "Hatchling Haven" };
+        if (player.gold !== undefined) {
+            player.progression.wallet = (player.progression.wallet || 0) + player.gold;
+            delete player.gold;
+        }
+        if (player.progression.gold !== undefined) {
+            player.progression.wallet = (player.progression.wallet || 0) + player.progression.gold;
+            delete player.progression.gold;
+        }
+        if (!player.stats) player.stats = { health: 100, mana: 10, str: 5, agi: 5, int: 5, battles: 0, wins: 0, quests_done: 0 };
+        if (!player.dragon) player.dragon = { name: "Hatchling", type: "BASIC", level: 1, mood: "HAPPY", skills: ["WeakBite"], stats: { hp: 50, attack: 5, defense: 5, speed: 5, affinity: "NONE" } };
+        if (!player.inventory) player.inventory = { items: { HealthPotion: 2, DragonTreat: 1 }, equipment: { weapon: "Fists", armor: "Rags", dragon_gear: "None" } };
+        if (!player.profile) player.profile = { name: name || jid.split('@')[0], join_date: Date.now(), last_daily: 0, notifications: true, text_speed: "normal", language: "en" };
+
+        return player;
     }
 
-    // --- NEW USER ONBOARDING: Create default RPG profile ---
-    global.db.players[jid] = {
+    const profile = {
         profile: {
-            name: name || jid.split('@')[0],
+            name: name || jid.split("@")[0],
             join_date: Date.now(),
             last_daily: 0,
             notifications: true,
@@ -31,14 +47,19 @@ function ensureUserExists(jid, name) {
         progression: {
             level: 1,
             xp: 0,
-            gold: 100, // Starter Gold
+            wallet: 100, // Starter wallet
             location: "Hatchling Haven",
             total_xp_earned: 0
         },
         stats: {
-            health: 100, mana: 10,
-            str: 5, agi: 5, int: 5,
-            battles: 0, wins: 0, quests_done: 0
+            health: 100,
+            mana: 10,
+            str: 5,
+            agi: 5,
+            int: 5,
+            battles: 0,
+            wins: 0,
+            quests_done: 0
         },
         dragon: {
             name: "Hatchling",
@@ -49,45 +70,50 @@ function ensureUserExists(jid, name) {
             stats: { hp: 50, attack: 5, defense: 5, speed: 5, affinity: "NONE" }
         },
         inventory: {
-            items: { "HealthPotion": 2, "DragonTreat": 1 },
+            items: { HealthPotion: 2, DragonTreat: 1 },
             equipment: { weapon: "Fists", armor: "Rags", dragon_gear: "None" }
         },
         quests: { active: [], completed: [] },
         achievements: [],
+        cards: [],
+        deck: [],
+        holder: []
     };
 
-    // Set initial session state
-    global.db.sessions[jid] = { state: "ONBOARDING_START", context: {} };
+    global.db.players[jid] = profile;
 
-    // Assuming global.saveDb() is available from index.js
-    if(global.saveDb) {
-        global.saveDb();
-    } else {
-        console.error("FATAL: global.saveDb() function is not defined in index.js");
+    if (!global.db.sessions[jid]) {
+        global.db.sessions[jid] = { state: "IDLE", context: {} };
     }
-    return global.db.players[jid];
+
+    saveDb();
+
+    return profile;
 }
 
-/**
- * Retrieves a player's full profile data.
- * @param {string} jid
- * @returns {object|null} The player's profile object, or null if not found.
- */
 function getPlayerProfile(jid) {
-    return global.db.players?.[jid] || null;
+    ensureStructures();
+    jid = normalizeJid(jid);
+    return global.db.players[jid] || null;
 }
 
-/**
- * Retrieves the player's current session state.
- * @param {string} jid
- * @returns {object} The session state object, or a default 'IDLE' state.
- */
 function getSessionState(jid) {
-    return global.db.sessions?.[jid] || { state: "IDLE", context: {} };
+    ensureStructures();
+    jid = normalizeJid(jid);
+    return global.db.sessions[jid] || { state: "IDLE", context: {} };
+}
+
+function updateSessionState(jid, state, context = {}) {
+    ensureStructures();
+    jid = normalizeJid(jid);
+    global.db.sessions[jid] = { state, context };
+    saveDb();
 }
 
 module.exports = {
     ensureUserExists,
     getPlayerProfile,
     getSessionState,
+    updateSessionState,
+    normalizeJid
 };
