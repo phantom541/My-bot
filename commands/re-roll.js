@@ -20,7 +20,7 @@ module.exports = {
   name: 're-roll',
   description: "Re-roll a dragon's moves (owner/mod only).",
   async execute(context) {
-    const { args, player, savePlayer, reply, hasRole, dragons } = context;
+    const { args, player, reply, hasRole, dragons } = context;
 
     if (!hasRole('mod')) {
       return reply('You do not have permission to use this command.');

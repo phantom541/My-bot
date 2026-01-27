@@ -2,7 +2,8 @@ module.exports = {
   name: 'choose',
   description: 'Choose your starter dragon.',
   async execute(context) {
-    const { sock, from, msg, player, savePlayer, args, dragons, STARTER_DRAGON_IDS } = context;
+    const { sock, from, msg, player, args, dragons, config } = context;
+    const starterDragonIds = config.gameplay.starterDragonIds;
 
     if (!player.adventureStarted) {
       return sock.sendMessage(from, { text: 'You need to start your adventure first! Use `%start-hunt`.' }, { quoted: msg });
@@ -13,7 +14,7 @@ module.exports = {
     }
 
     const chosenId = parseInt(args[0]);
-    if (isNaN(chosenId) || !STARTER_DRAGON_IDS.includes(chosenId)) {
+    if (isNaN(chosenId) || !starterDragonIds.includes(chosenId)) {
       return sock.sendMessage(from, { text: 'That is not a valid starter dragon ID. Please choose from the list provided.' }, { quoted: msg });
     }
 

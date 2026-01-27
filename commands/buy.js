@@ -2,7 +2,7 @@ module.exports = {
   name: 'buy',
   description: 'Buys an item from the shop.',
   async execute(context) {
-    const { args, player, savePlayer, reply, shop } = context;
+    const { args, player, reply, shop } = context;
     const itemKey = args[0]?.toLowerCase();
     if (!itemKey || !shop[itemKey]) return reply('Invalid item.');
     const item = shop[itemKey];

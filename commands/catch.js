@@ -2,7 +2,7 @@ module.exports = {
   name: 'catch',
   description: 'Catch the spawned wild dragon.',
   async execute(context) {
-    const { activeWildEncounters, from, sender, reply, player, args, savePlayer, activeBattles } = context;
+    const { activeWildEncounters, from, sender, reply, player, args, activeBattles } = context;
     const wildEncounter = activeWildEncounters[from];
     if (!wildEncounter) return reply('There is no wild dragon to catch.');
 

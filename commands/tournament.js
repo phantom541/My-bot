@@ -7,13 +7,14 @@ module.exports = {
     const restOfArgs = args.slice(1);
 
     switch (subCommand) {
-      case 'create':
+      case 'create': {
         const tournamentName = restOfArgs.join(' ');
         if (!tournamentName) {
           return reply('Please provide a name for the tournament.');
         }
         await reply(`Tournament "${tournamentName}" created!`);
         break;
+      }
       case 'join':
         await reply('You have joined the tournament!');
         break;

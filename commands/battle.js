@@ -2,7 +2,7 @@ module.exports = {
   name: 'battle',
   description: 'Engage in dragon battles.',
   async execute(context) {
-    const { args, activeBattles, from, reply, sender, msg, getPlayer, BATTLE_ENVIRONMENTS, generateBattleImage, sock, getEffectiveness, dragons, PLAYER_XP_GAIN, getGuild, updateGuild, GUILD_TIERS, getRank, updatePlayer: updateContextPlayer, handleDungeonProgression, activeBeast, XP_PER_LEVEL, XP_GAIN_MULTIPLIER, activeWildEncounters } = context;
+    const { args, activeBattles, from, reply, sender, msg, getPlayer, BATTLE_ENVIRONMENTS, generateBattleImage, sock, getEffectiveness, dragons, PLAYER_XP_GAIN, getGuild, updateGuild, GUILD_TIERS, getRank, updatePlayer, handleDungeonProgression, activeBeast, XP_PER_LEVEL, XP_GAIN_MULTIPLIER, activeWildEncounters } = context;
     const battle = activeBattles[from];
     const subCommand = args[0]?.toLowerCase();
 

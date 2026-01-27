@@ -5,7 +5,7 @@ module.exports = {
   description: 'Executes JavaScript code (Owner only).',
   async execute(context) {
     // Making all context variables available to eval
-    const { args, reply, hasRole, sock, msg, from, sender, player, savePlayer, commandName, ...restOfContext } = context;
+    const { args, reply, hasRole, sock, msg, from, sender, player, commandName, ...restOfContext } = context;
 
     if (!hasRole('owner')) {
       return reply('❌ You are not authorized to use this command.');

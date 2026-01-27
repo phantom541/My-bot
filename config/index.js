@@ -26,5 +26,8 @@ module.exports = {
         cardPackSize: parseInt(process.env.CARD_PACK_SIZE) || 3,
         guildCreateCost: parseInt(process.env.GUILD_CREATE_COST) || 10000,
         maxBet: parseInt(process.env.MAX_BET) || 1000000
+    },
+    gameplay: {
+        starterDragonIds: (process.env.STARTER_DRAGON_IDS || '1,2,3,4,5,6').split(',').map(id => parseInt(id.trim()))
     }
 };

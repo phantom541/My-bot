@@ -2,7 +2,7 @@ module.exports = {
   name: 'movetodeck',
   description: 'Moves a card from your holder to your deck.',
   async execute(context) {
-    const { args, player, savePlayer, reply } = context;
+    const { args, player, reply } = context;
     const holderIndex = parseInt(args[0]) - 1;
 
     if (isNaN(holderIndex)) {
