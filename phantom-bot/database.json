@@ -1,0 +1,195 @@
+{
+  "players": {
+    "test@s.whatsapp.net": {
+      "progression": {
+        "wallet": 384000,
+        "adventureStarted": true,
+        "level": 1,
+        "xp": 0,
+        "location": "Hatchling Haven"
+      },
+      "jid": "test@s.whatsapp.net",
+      "stats": {
+        "health": 100,
+        "mana": 10,
+        "str": 5,
+        "agi": 5,
+        "int": 5,
+        "battles": 0,
+        "wins": 0,
+        "quests_done": 0
+      },
+      "dragon": {
+        "name": "Hatchling",
+        "type": "BASIC",
+        "level": 1,
+        "mood": "HAPPY",
+        "skills": [
+          "WeakBite"
+        ],
+        "stats": {
+          "hp": 50,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5,
+          "affinity": "NONE"
+        }
+      },
+      "inventory": {
+        "items": {
+          "HealthPotion": 2,
+          "DragonTreat": 1
+        },
+        "equipment": {
+          "weapon": "Fists",
+          "armor": "Rags",
+          "dragon_gear": "None"
+        },
+        "dragons": [
+          {
+            "id": 68,
+            "name": "Triple Stryke",
+            "type": "Electric",
+            "imageUrl": "https://static.wikia.nocookie.net/howtotrainyourdragon/images/b/b2/Triple_Stryke_Titans_Uprising.png",
+            "moves": [
+              {
+                "name": "Triple Tail Strike",
+                "damage": 90,
+                "type": "Physical"
+              },
+              {
+                "name": "Wing Slam",
+                "damage": 65,
+                "type": "Physical"
+              },
+              {
+                "name": "Quick Bite",
+                "damage": 50,
+                "type": "Physical"
+              },
+              {
+                "name": "Shock Wave",
+                "damage": 85,
+                "type": "Special"
+              }
+            ],
+            "level": 1,
+            "xp": 0,
+            "capturedAt": 1769509163618
+          },
+          {
+            "id": 80,
+            "name": "Sky Torcher",
+            "type": "Fire",
+            "imageUrl": "https://static.wikia.nocookie.net/howtotrainyourdragon/images/6/67/Sky_Torcher_Artwork.png",
+            "moves": [
+              {
+                "name": "Tail Spin",
+                "damage": 90,
+                "type": "Physical"
+              },
+              {
+                "name": "Wing Slash",
+                "damage": 85,
+                "type": "Physical"
+              },
+              {
+                "name": "Fire Cyclone",
+                "damage": 160,
+                "type": "Special"
+              },
+              {
+                "name": "Sky Burst",
+                "damage": 170,
+                "type": "Special"
+              }
+            ],
+            "level": 1,
+            "xp": 0,
+            "capturedAt": 1769509204152
+          }
+        ]
+      },
+      "profile": {
+        "name": "TestUser",
+        "join_date": 1769509162947,
+        "last_daily": 1769509203971,
+        "notifications": true,
+        "text_speed": "normal",
+        "language": "en"
+      }
+    },
+    "26775949123@s.whatsapp.net": {
+      "jid": "26775949123@s.whatsapp.net",
+      "profile": {
+        "name": "TestUser",
+        "join_date": 1769509163410,
+        "last_daily": 0,
+        "notifications": true,
+        "text_speed": "normal",
+        "language": "en"
+      },
+      "progression": {
+        "level": 1,
+        "xp": 0,
+        "wallet": 100,
+        "location": "Hatchling Haven",
+        "total_xp_earned": 0
+      },
+      "stats": {
+        "health": 100,
+        "mana": 10,
+        "str": 5,
+        "agi": 5,
+        "int": 5,
+        "battles": 0,
+        "wins": 0,
+        "quests_done": 0
+      },
+      "dragon": {
+        "name": "Hatchling",
+        "type": "BASIC",
+        "level": 1,
+        "mood": "HAPPY",
+        "skills": [
+          "WeakBite"
+        ],
+        "stats": {
+          "hp": 50,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5,
+          "affinity": "NONE"
+        }
+      },
+      "inventory": {
+        "items": {
+          "HealthPotion": 2,
+          "DragonTreat": 1
+        },
+        "equipment": {
+          "weapon": "Fists",
+          "armor": "Rags",
+          "dragon_gear": "None"
+        },
+        "dragons": []
+      },
+      "quests": {
+        "active": [],
+        "completed": []
+      },
+      "achievements": [],
+      "cards": [],
+      "deck": [],
+      "holder": []
+    }
+  },
+  "sessions": {
+    "26775949123@s.whatsapp.net": {
+      "state": "IDLE",
+      "context": {}
+    }
+  },
+  "guilds": {},
+  "groupSettings": {}
+}
